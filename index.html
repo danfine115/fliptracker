@@ -559,7 +559,7 @@ td.actions { text-align: right; }
 
 <script>
 // ========================== DATA LAYER ==========================
-const APP_VERSION = '2026-07-02a';
+const APP_VERSION = '2026-07-02b';
 
 const STORE_ITEMS = 'fliptracker_items';
 const STORE_EXPENSES = 'fliptracker_expenses';
@@ -608,7 +608,7 @@ function saveFirebaseConfig() {
   localStorage.setItem(STORE_FB_URL, url);
   localStorage.setItem(STORE_FB_KEY, key);
   document.getElementById('sync-status').innerHTML = '<span style="color:var(--green);">Saved! Syncing data...</span>';
-  syncToFirebase(true);
+  syncToFirebase();
 }
 
 function clearFirebaseConfig() {
@@ -641,26 +641,16 @@ function getSyncData() {
   };
 }
 
-let _firebaseSyncTimer = null;
-function syncToFirebase(force) {
+function syncToFirebase() {
   const cfg = getFirebaseConfig();
   if (!cfg.url || !cfg.key) return;
-  if (_firebaseSyncTimer && !force) return;
-  clearTimeout(_firebaseSyncTimer);
-  _firebaseSyncTimer = setTimeout(async () => {
-    _firebaseSyncTimer = null;
-    try {
-      const data = getSyncData();
-      const res = await fetch(cfg.url + '/data.json?auth=' + cfg.key, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
-      if (res.ok) {
-        localStorage.setItem('fliptracker_last_sync', new Date().toISOString());
-      }
-    } catch {}
-  }, force ? 0 : 3000);
+  const data = getSyncData();
+  localStorage.setItem('fliptracker_last_sync', data.syncedAt);
+  fetch(cfg.url + '/data.json?auth=' + cfg.key, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  }).catch(() => {});
 }
 
 async function loadFromFirebase() {
@@ -670,12 +660,15 @@ async function loadFromFirebase() {
     const res = await fetch(cfg.url + '/data.json?auth=' + cfg.key);
     if (!res.ok) return false;
     const data = await res.json();
-    if (!data || !data.items) return false;
+    if (!data || !data.items || !data.syncedAt) return false;
+    const lastSync = localStorage.getItem('fliptracker_last_sync') || '';
+    if (data.syncedAt <= lastSync) return false;
     if (data.items) lsSave(STORE_ITEMS, data.items);
     if (data.expenses) lsSave(STORE_EXPENSES, data.expenses);
     if (data.partners) lsSave(STORE_PARTNERS, data.partners || []);
     if (data.mileage) lsSave(STORE_MILEAGE, data.mileage);
     if (data.scans) lsSave(STORE_SCANS, data.scans || []);
+    localStorage.setItem('fliptracker_last_sync', data.syncedAt);
     return true;
   } catch { return false; }
 }

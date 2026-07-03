@@ -1,7 +1,5 @@
-const CACHE = 'fliptracker-v3';
+const CACHE = 'fliptracker-v4';
 const PRECACHE = [
-  '/',
-  '/index.html',
   '/manifest.json',
   '/icon-192.svg',
   '/icon-512.svg'
@@ -25,23 +23,19 @@ self.addEventListener('fetch', e => {
   if (e.request.url.startsWith('chrome-extension://')) return;
   const url = new URL(e.request.url);
 
+  // Never cache HTML — always fetch from network
   if (url.pathname === '/' || url.pathname === '/index.html') {
-    e.respondWith(
-      fetch(e.request).then(res => {
-        const clone = res.clone();
-        caches.open(CACHE).then(c => c.put(e.request, clone));
-        return res;
-      }).catch(() => caches.match(e.request))
-    );
+    e.respondWith(fetch(e.request).catch(() => new Response('Offline', { status: 503 })));
     return;
   }
 
+  // Cache-first for static assets
   e.respondWith(
     caches.match(e.request).then(cached => cached || fetch(e.request).then(res => {
       const clone = res.clone();
       caches.open(CACHE).then(c => c.put(e.request, clone));
       return res;
-    }).catch(() => caches.match('/index.html')))
+    }).catch(() => caches.match('/manifest.json')))
   );
 });
 
