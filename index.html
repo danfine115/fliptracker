@@ -808,6 +808,10 @@ async function readDataFile() {
     if (data.partners) lsSave(STORE_PARTNERS, data.partners);
     if (data.mileage) lsSave(STORE_MILEAGE, data.mileage);
     if (data.scans) lsSave(STORE_SCANS, data.scans);
+    if (data.firebaseUrl && data.firebaseKey) {
+      localStorage.setItem(STORE_FB_URL, data.firebaseUrl);
+      localStorage.setItem(STORE_FB_KEY, data.firebaseKey);
+    }
   } catch (e) {
     if (e.name === 'NotFoundError') return;
     console.warn('Read error:', e);
@@ -819,14 +823,17 @@ async function writeDataFile() {
   try {
     const fileHandle = await dirHandle.getFileHandle('data.json', { create: true });
     const writable = await fileHandle.createWritable();
+    const fb = getFirebaseConfig();
     const data = {
-      version: '1.2',
+      version: '1.3',
       updatedAt: new Date().toISOString(),
     items: getItems(),
     expenses: getExpenses(),
     partners: getPartners(),
     mileage: getMileage(),
-    scans: getScans()
+    scans: getScans(),
+    firebaseUrl: fb.url,
+    firebaseKey: fb.key
     };
     await writable.write(JSON.stringify(data, null, 2));
     await writable.close();
@@ -1493,12 +1500,15 @@ function exportCSV() {
 
 // ========================== DATA EXPORT/IMPORT ==========================
 function exportData() {
+  const fb = getFirebaseConfig();
   const data = {
     items: getItems(),
     expenses: getExpenses(),
     partners: getPartners(),
     mileage: getMileage(),
     scans: getScans(),
+    firebaseUrl: fb.url,
+    firebaseKey: fb.key,
     exportedAt: new Date().toISOString()
   };
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -1521,10 +1531,17 @@ function importData(event) {
       if (data.partners) setPartners(data.partners || []);
       if (data.mileage) setMileage(data.mileage);
       if (data.scans) setScans(data.scans || []);
+      if (data.firebaseUrl && data.firebaseKey) {
+        localStorage.setItem(STORE_FB_URL, data.firebaseUrl);
+        localStorage.setItem(STORE_FB_KEY, data.firebaseKey);
+      }
       renderDashboard();
       renderItems();
       renderExpenses();
       renderMileage();
+      document.getElementById('firebase-url').value = data.firebaseUrl || '';
+      document.getElementById('firebase-key').value = data.firebaseKey || '';
+      showPage('dashboard');
       alert('Data imported successfully! ' + (data.items ? data.items.length : 0) + ' items, ' +
         (data.expenses ? data.expenses.length : 0) + ' expenses, ' +
         (data.mileage ? data.mileage.length : 0) + ' trips.');
