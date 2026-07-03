@@ -1597,6 +1597,20 @@ async function scanLoop() {
           return;
         }
       }
+    } else if (typeof ZXing !== 'undefined') {
+      const video = document.getElementById('scanner-video');
+      if (video.readyState >= 2) {
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+        const codeReader = new ZXing.BrowserMultiFormatReader();
+        const result = await codeReader.decodeFromImage(undefined, canvas.toDataURL());
+        if (result) {
+          handleBarcode(result.getText());
+          return;
+        }
+      }
     }
   } catch {}
   setTimeout(scanLoop, 500);
