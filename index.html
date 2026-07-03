@@ -117,8 +117,8 @@ a:hover { text-decoration: underline; }
 /* Cards */
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); }
 .card-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
-.stat-card { text-align: center; padding: 20px 16px; }
-.stat-card .stat-value { font-size: 1.8rem; font-weight: 700; margin-bottom: 8px; }
+.stat-card { text-align: center; padding: 20px 16px; display:flex; flex-direction:column; align-items:center; gap:6px; }
+.stat-card .stat-value { font-size: 1.8rem; font-weight: 700; }
 .stat-card .stat-label { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted); line-height: 1.4; }
 .stat-card .stat-sub { font-size: .75rem; color: var(--text-muted); margin-top: 4px; }
 .positive { color: var(--green); }
