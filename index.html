@@ -188,6 +188,19 @@ td.actions { text-align: right; }
 .filters { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
 .filters select, .filters input { padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: .8rem; font-family: inherit; background: var(--surface); }
 .filters .btn { margin-left: auto; }
+/* Scanner */
+.scanner-view { text-align:center; }
+.scanner-video { max-width:100%; border-radius:8px; background:#000; max-height:320px; width:100%; }
+.scanner-placeholder { padding:32px 20px; color:var(--text-muted); }
+.scanner-icon { font-size:2rem; margin-bottom:12px; }
+.scanner-actions { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-top:12px; }
+.scanner-or { display:flex; gap:4px; align-items:center; }
+.or-text { font-size:.85rem; color:var(--text-muted); }
+.scanner-upc-input { width:120px; padding:6px 10px; border:1px solid var(--border); border-radius:6px; font-size:.85rem; font-family:inherit; background:var(--surface); color:var(--text); }
+.scanner-result { margin-top:12px; }
+.scanner-name-edit { display:flex; gap:6px; align-items:center; flex-wrap:wrap; justify-content:center; margin-top:8px; }
+.scanner-name-edit input { flex:1; min-width:140px; padding:8px 10px; border:1px solid var(--border); border-radius:6px; font-size:.9rem; font-family:inherit; background:var(--surface); color:var(--text); }
+
 @media (max-width: 768px) {
   .sidebar {
     position: fixed; bottom: 0; left: 0; top: auto; right: 0;
@@ -220,6 +233,11 @@ td.actions { text-align: right; }
   .filters { gap: 6px; }
   .page-header { flex-direction: column; align-items: flex-start; gap: 8px; }
   .report-section .card-row[style*="1fr 1fr 1fr"] { grid-template-columns: 1fr !important; }
+  .scanner-video { max-height:45vh; }
+  .scanner-actions { flex-direction:column; align-items:stretch; }
+  .scanner-actions .btn { justify-content:center; }
+  .scanner-or { justify-content:center; flex-wrap:wrap; }
+  .scanner-upc-input { flex:1; min-width:0; }
 }
 </style>
 </head>
@@ -318,30 +336,35 @@ td.actions { text-align: right; }
       <h2>Barcode Scanner</h2>
       <button class="btn btn-sm" onclick="clearScannedItems()" style="color:var(--danger)">Clear History</button>
     </div>
-    <div class="card">
-      <div id="scanner-view" style="text-align:center;padding:20px 0;">
-        <video id="scanner-video" autoplay playsinline style="max-width:100%;border-radius:8px;background:#000;max-height:300px;display:none;"></video>
-        <div id="scanner-placeholder" style="padding:40px 20px;color:var(--text-muted);">
-          <p style="font-size:2rem;margin-bottom:12px;">📷</p>
+    <div class="card scanner-card">
+      <div id="scanner-view" class="scanner-view">
+        <video id="scanner-video" autoplay playsinline class="scanner-video" style="display:none;"></video>
+        <div id="scanner-placeholder" class="scanner-placeholder">
+          <p class="scanner-icon">📷</p>
           <p>Scan a barcode to look up product info and auto-fill an item.</p>
         </div>
-        <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:12px;">
+        <div class="scanner-actions">
           <button class="btn btn-primary" onclick="document.getElementById('scanner-photo-input').click()">📸 Scan Barcode</button>
           <button class="btn" id="scanner-start-btn" onclick="startScanner()">Live Camera</button>
           <button class="btn" id="scanner-stop-btn" onclick="stopScanner()" style="display:none;">Stop Camera</button>
           <input type="file" id="scanner-photo-input" accept="image/*" capture="environment" style="display:none" onchange="scanPhoto(event)">
-          <span style="display:flex;gap:4px;align-items:center;">
-            <span style="font-size:.85rem;color:var(--text-muted);">or</span>
-            <input type="text" id="scanner-manual" placeholder="Enter UPC" style="width:120px;padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:.85rem;font-family:inherit;background:var(--surface);color:var(--text);">
+          <span class="scanner-or">
+            <span class="or-text">or</span>
+            <input type="text" id="scanner-manual" class="scanner-upc-input" placeholder="Enter UPC">
             <button class="btn btn-sm" onclick="lookupManual()">Lookup</button>
           </span>
         </div>
-        <div id="scanner-result" style="margin-top:12px;"></div>
+        <div id="scanner-result" class="scanner-result"></div>
       </div>
     </div>
     <div class="card" style="margin-top:12px;">
       <h3>Scanned Items</h3>
-      <div id="scanned-items-list"><div class="empty-state"><p>No scans yet</p></div></div>
+      <div class="table-wrap">
+        <table><thead><tr><th>UPC</th><th>Product</th><th>Date</th><th></th></tr></thead>
+          <tbody id="scanned-items-tbody"></tbody>
+        </table>
+      </div>
+      <div id="scanned-items-empty" class="empty-state"><p>No scans yet</p></div>
     </div>
   </div>
 
@@ -1535,19 +1558,23 @@ function initScanner() {
 
 function renderScannedItems() {
   const scans = getScans();
-  const container = document.getElementById('scanned-items-list');
+  const tbody = document.getElementById('scanned-items-tbody');
+  const empty = document.getElementById('scanned-items-empty');
   if (!scans.length) {
-    container.innerHTML = '<div class="empty-state"><p>No scans yet</p></div>';
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
     return;
   }
-  container.innerHTML = '<div class="table-wrap"><table><thead><tr><th>UPC</th><th>Product</th><th>Date</th><th></th></tr></thead><tbody>' +
-    scans.slice().reverse().map(s => `<tr>
-      <td style="font-family:monospace;font-size:.8rem;">${esc(s.upc)}</td>
-      <td>${esc(s.product||'—')}</td>
-      <td style="font-size:.8rem">${s.date}</td>
-      <td><button class="btn btn-sm" onclick="createItemFromScan('${s.id}')">+ Add Item</button>
-      <button class="btn btn-sm" style="color:var(--danger)" onclick="deleteScan('${s.id}')">✕</button></td>
-    </tr>`).join('') + '</tbody></table></div>';
+  empty.style.display = 'none';
+  tbody.innerHTML = scans.slice().reverse().map(s => `<tr>
+    <td style="font-family:monospace;font-size:.8rem;">${esc(s.upc)}</td>
+    <td>${esc(s.product||'—')}</td>
+    <td style="font-size:.8rem">${s.date}</td>
+    <td class="actions">
+      <button class="btn btn-sm" onclick="createItemFromScan('${s.id}')">+ Add Item</button>
+      <button class="btn btn-sm" style="color:var(--danger)" onclick="deleteScan('${s.id}')">✕</button>
+    </td>
+  </tr>`).join('');
 }
 
 async function startScanner() {
@@ -1665,18 +1692,33 @@ async function handleBarcode(code) {
     return;
   }
   let productName = '';
+  let source = '';
   try {
     const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${code}.json`);
     if (res.ok) {
       const data = await res.json();
       if (data.product) {
         productName = data.product.product_name || data.product.generic_name || '';
+        if (productName) source = 'Open Food Facts';
       }
     }
   } catch {}
+  if (!productName) {
+    try {
+      const res = await fetch(`https://api.upcitemdb.com/prod/trial/lookup?upc=${code}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.items && data.items.length > 0) {
+          productName = data.items[0].title || data.items[0].description || '';
+          if (productName) source = 'UPCItemDB';
+        }
+      }
+    } catch {}
+  }
   const now = new Date();
+  const scanId = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2,6);
   const scan = {
-    id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2,6),
+    id: scanId,
     upc: code,
     product: productName || 'Unknown Product',
     date: today()
@@ -1684,9 +1726,40 @@ async function handleBarcode(code) {
   scans.push(scan);
   setScans(scans);
   renderScannedItems();
+  if (productName) {
+    document.getElementById('scanner-result').innerHTML =
+      `<p style="color:var(--green);">Scanned: <strong>${esc(scan.product)}</strong> (${code})</p>
+       <p style="font-size:.75rem;color:var(--text-muted);margin-top:2px;">via ${esc(source)}</p>
+       <button class="btn btn-primary btn-sm" onclick="createItemFromScan('${scanId}')" style="margin-top:8px;">+ Add as Item</button>`;
+  } else {
+    document.getElementById('scanner-result').innerHTML =
+      `<p style="color:var(--warning);">No product found for <strong>${esc(code)}</strong></p>
+       <div class="scanner-name-edit">
+         <input type="text" id="scan-name-input" placeholder="Enter product name..." autofocus>
+         <button class="btn btn-primary btn-sm" onclick="setScanName('${scanId}')">Save</button>
+         <button class="btn btn-sm" onclick="createItemFromScan('${scanId}')">Skip</button>
+       </div>`;
+    setTimeout(() => {
+      const el = document.getElementById('scan-name-input');
+      if (el) el.focus();
+    }, 100);
+  }
+}
+
+function setScanName(scanId) {
+  const input = document.getElementById('scan-name-input');
+  if (!input) return;
+  const name = input.value.trim();
+  if (!name) return;
+  const scans = getScans();
+  const scan = scans.find(s => s.id === scanId);
+  if (!scan) return;
+  scan.product = name;
+  setScans(scans);
+  renderScannedItems();
   document.getElementById('scanner-result').innerHTML =
-    `<p style="color:var(--green);">Scanned: <strong>${esc(scan.product)}</strong> (${code})</p>
-     <button class="btn btn-primary btn-sm" onclick="createItemFromScan('${scan.id}')" style="margin-top:8px;">+ Add as Item</button>`;
+    `<p style="color:var(--green);">Saved: <strong>${esc(name)}</strong> (${esc(scan.upc)})</p>
+     <button class="btn btn-primary btn-sm" onclick="createItemFromScan('${scanId}')" style="margin-top:8px;">+ Add as Item</button>`;
 }
 
 function lookupManual() {
