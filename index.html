@@ -1201,9 +1201,9 @@ function renderDashboard() {
     <div class="card" style="margin-top:12px;">
       <h3 style="font-size:.85rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);margin-bottom:8px;">Inventory Turnover</h3>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:16px;">
-        <div class="stat-card"><span class="stat-value">${avgDays}</span><span class="stat-label">Avg Days in Inventory</span></div>
-        <div class="stat-card"><span class="stat-value">${itemCount ? Math.round(soldCount/itemCount*100) : 0}%</span><span class="stat-label">Sell-Through Rate</span></div>
-        <div class="stat-card"><span class="stat-value">$${soldCount ? fmt(Object.values(byCat).reduce((s,c)=>s+c.net,0)/soldCount) : '0.00'}</span><span class="stat-label">Avg Profit / Item</span></div>
+        <div class="stat-card"><span class="stat-label">Avg Days in Inventory</span><span class="stat-value">${avgDays}</span></div>
+        <div class="stat-card"><span class="stat-label">Sell-Through Rate</span><span class="stat-value">${itemCount ? Math.round(soldCount/itemCount*100) : 0}%</span></div>
+        <div class="stat-card"><span class="stat-label">Avg Profit / Item</span><span class="stat-value">$${soldCount ? fmt(Object.values(byCat).reduce((s,c)=>s+c.net,0)/soldCount) : '0.00'}</span></div>
       </div>
     </div>`;
 }
