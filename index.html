@@ -559,7 +559,7 @@ td.actions { text-align: right; }
 
 <script>
 // ========================== DATA LAYER ==========================
-const APP_VERSION = '2026-07-02b';
+const APP_VERSION = '2026-07-02c';
 
 const STORE_ITEMS = 'fliptracker_items';
 const STORE_EXPENSES = 'fliptracker_expenses';
@@ -664,9 +664,16 @@ async function loadFromFirebase() {
     const res = await fetch(cfg.url + '/data.json?auth=' + cfg.key);
     if (!res.ok) return false;
     const data = await res.json();
-    if (!data || !data.items || !data.syncedAt) return false;
+    if (!data || !data.items) return false;
     const lastSync = localStorage.getItem('fliptracker_last_sync') || '';
-    if (data.syncedAt <= lastSync) return false;
+    if (data.syncedAt && data.syncedAt > lastSync) {
+      // remote timestamp is newer — straightforward apply
+    } else {
+      // same-device stale-write guard: skip if remote is not newer
+      // BUT re-check with content comparison in case clock skew hides cross-device changes
+      const local = getSyncData();
+      if (JSON.stringify(local.items) === JSON.stringify(data.items)) return false;
+    }
     if (data.items) lsSave(STORE_ITEMS, data.items);
     if (data.expenses) lsSave(STORE_EXPENSES, data.expenses);
     if (data.partners) lsSave(STORE_PARTNERS, data.partners || []);
@@ -708,7 +715,7 @@ function startFirebasePoll() {
       if (!res.ok) return;
       const data = await res.json();
       if (!data || !data.items || !data.syncedAt) return;
-      if (data.syncedAt > lastSync && data.syncedAt !== lastSync) {
+      if (data.syncedAt > lastSync) {
         lsSave(STORE_ITEMS, data.items);
         if (data.expenses) lsSave(STORE_EXPENSES, data.expenses);
         if (data.partners) lsSave(STORE_PARTNERS, data.partners || []);
