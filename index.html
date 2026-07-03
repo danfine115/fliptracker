@@ -608,7 +608,11 @@ function saveFirebaseConfig() {
   localStorage.setItem(STORE_FB_URL, url);
   localStorage.setItem(STORE_FB_KEY, key);
   document.getElementById('sync-status').innerHTML = '<span style="color:var(--green);">Saved! Syncing data...</span>';
-  syncToFirebase();
+  startFirebasePoll();
+  loadFromFirebase().then(found => {
+    if (found) { renderDashboard(); renderItems(); renderExpenses(); }
+    syncToFirebase();
+  });
 }
 
 function clearFirebaseConfig() {
