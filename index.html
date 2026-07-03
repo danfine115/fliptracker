@@ -118,8 +118,8 @@ a:hover { text-decoration: underline; }
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); }
 .card-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
 .stat-card { text-align: center; padding: 20px 16px; }
-.stat-card .stat-value { font-size: 1.8rem; font-weight: 700; margin-bottom: 4px; }
-.stat-card .stat-label { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted); }
+.stat-card .stat-value { font-size: 1.8rem; font-weight: 700; margin-bottom: 8px; }
+.stat-card .stat-label { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted); line-height: 1.4; }
 .stat-card .stat-sub { font-size: .75rem; color: var(--text-muted); margin-top: 4px; }
 .positive { color: var(--green); }
 .negative { color: var(--red); }
@@ -1200,10 +1200,10 @@ function renderDashboard() {
     </div>
     <div class="card" style="margin-top:12px;">
       <h3 style="font-size:.85rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);margin-bottom:8px;">Inventory Turnover</h3>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;">
-        <div class="stat-card"><span class="stat-label">Avg Days in Inventory</span><span class="stat-value">${avgDays}</span></div>
-        <div class="stat-card"><span class="stat-label">Sell-Through Rate</span><span class="stat-value">${itemCount ? Math.round(soldCount/itemCount*100) : 0}%</span></div>
-        <div class="stat-card"><span class="stat-label">Avg Profit/Item</span><span class="stat-value">$${soldCount ? fmt(Object.values(byCat).reduce((s,c)=>s+c.net,0)/soldCount) : '0.00'}</span></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:16px;">
+        <div class="stat-card"><span class="stat-value">${avgDays}</span><span class="stat-label">Avg Days in Inventory</span></div>
+        <div class="stat-card"><span class="stat-value">${itemCount ? Math.round(soldCount/itemCount*100) : 0}%</span><span class="stat-label">Sell-Through Rate</span></div>
+        <div class="stat-card"><span class="stat-value">$${soldCount ? fmt(Object.values(byCat).reduce((s,c)=>s+c.net,0)/soldCount) : '0.00'}</span><span class="stat-label">Avg Profit / Item</span></div>
       </div>
     </div>`;
 }
