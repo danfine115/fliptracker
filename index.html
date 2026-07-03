@@ -699,6 +699,31 @@ async function testFirebase() {
   }
 }
 
+let _firebasePollTimer = null;
+function startFirebasePoll() {
+  clearInterval(_firebasePollTimer);
+  _firebasePollTimer = setInterval(async () => {
+    const cfg = getFirebaseConfig();
+    if (!cfg.url || !cfg.key) { clearInterval(_firebasePollTimer); return; }
+    try {
+      const lastSync = localStorage.getItem('fliptracker_last_sync') || '';
+      const res = await fetch(cfg.url + '/data.json?auth=' + cfg.key);
+      if (!res.ok) return;
+      const data = await res.json();
+      if (!data || !data.items || !data.syncedAt) return;
+      if (data.syncedAt > lastSync && data.syncedAt !== lastSync) {
+        lsSave(STORE_ITEMS, data.items);
+        if (data.expenses) lsSave(STORE_EXPENSES, data.expenses);
+        if (data.partners) lsSave(STORE_PARTNERS, data.partners || []);
+        if (data.mileage) lsSave(STORE_MILEAGE, data.mileage);
+        if (data.scans) lsSave(STORE_SCANS, data.scans || []);
+        localStorage.setItem('fliptracker_last_sync', data.syncedAt);
+        renderDashboard(); renderItems(); renderExpenses();
+      }
+    } catch {}
+  }, 5000);
+}
+
 function addPartner() {
   const name = document.getElementById('partner-name').value.trim();
   const pct = parseFloat(document.getElementById('partner-pct').value);
@@ -1936,6 +1961,7 @@ function init() {
     loadFromFirebase().then(found => {
       if (found) { renderDashboard(); renderItems(); renderExpenses(); }
     });
+    startFirebasePoll();
   }
 
   populateSelect('item-category', CATEGORIES, '');
