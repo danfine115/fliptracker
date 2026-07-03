@@ -559,6 +559,8 @@ td.actions { text-align: right; }
 
 <script>
 // ========================== DATA LAYER ==========================
+const APP_VERSION = '2026-07-02a';
+
 const STORE_ITEMS = 'fliptracker_items';
 const STORE_EXPENSES = 'fliptracker_expenses';
 const STORE_PARTNERS = 'fliptracker_partners';
@@ -1887,13 +1889,40 @@ async function tryFetchDataFile() {
 }
 
 function init() {
+  // Force refresh if app version changed — kills stale PWA cache
+  const lastVer = localStorage.getItem('fliptracker_version');
+  if (lastVer && lastVer !== APP_VERSION) {
+    localStorage.setItem('fliptracker_version', APP_VERSION);
+    if ('serviceWorker' in navigator) {
+      caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k)))).then(() => {
+        navigator.serviceWorker.getRegistrations().then(regs =>
+          Promise.all(regs.map(r => r.unregister()))
+        ).then(() => window.location.reload());
+      });
+    }
+    return;
+  }
+  if (!lastVer) localStorage.setItem('fliptracker_version', APP_VERSION);
+
   const savedTheme = localStorage.getItem('fliptracker_theme');
   if (savedTheme === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
   updateDarkIcon();
 
-  // Register service worker for PWA
+  // Register service worker for PWA — with auto-update
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js').catch(() => {});
+    navigator.serviceWorker.register('sw.js?v=' + APP_VERSION, { scope: '/' }).then(reg => {
+      reg.addEventListener('updatefound', () => {
+        const newSW = reg.installing;
+        newSW.addEventListener('statechange', () => {
+          if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
+            newSW.postMessage('SKIP_WAITING');
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+              window.location.reload();
+            });
+          }
+        });
+      });
+    }).catch(() => {});
   }
 
   // Restore folder handle first; if using localhost, also try direct fetch fallback
