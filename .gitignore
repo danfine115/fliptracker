@@ -1,0 +1,6 @@
+.DS_Store
+*.local
+data.json
+
+# Local Netlify folder
+.netlify

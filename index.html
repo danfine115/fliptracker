@@ -1,0 +1,2089 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0f0f13" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f5f5f0" media="(prefers-color-scheme: light)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.svg">
+<script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js" defer></script>
+<script>
+// zxing loaded — mark ready
+document.addEventListener('DOMContentLoaded', () => { window.__zxingReady = true; });
+</script>
+<title>FlipTracker — Thrift Flip Business</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #f5f5f0;
+  --surface: #ffffff;
+  --border: #d4d4c8;
+  --text: #1a1a1a;
+  --text-muted: #6b6b60;
+  --primary: #2d6a4f;
+  --primary-hover: #1b4332;
+  --danger: #c0392b;
+  --warning: #d4a017;
+  --green: #2d6a4f;
+  --red: #c0392b;
+  --radius: 8px;
+  --shadow: 0 1px 3px rgba(0,0,0,.08);
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --hover-bg: #f0f0eb;
+  --active-bg: #e8f0ec;
+  --tag-inv-bg: #fff3cd;
+  --tag-inv-c: #856404;
+  --tag-listed-bg: #cce5ff;
+  --tag-listed-c: #004085;
+  --tag-sold-bg: #d4edda;
+  --tag-sold-c: #155724;
+  --tag-lost-bg: #f8d7da;
+  --tag-lost-c: #721c24;
+  --exp-tag-bg: #e8f0ec;
+  --badge-bg: #e8f0ec;
+  --modal-overlay: rgba(0,0,0,.4);
+}
+[data-theme="dark"] {
+  --bg: #121212;
+  --surface: #1e1e1e;
+  --border: #333;
+  --text: #e0e0e0;
+  --text-muted: #999;
+  --primary: #4ade80;
+  --primary-hover: #22c55e;
+  --danger: #f87171;
+  --warning: #fbbf24;
+  --green: #4ade80;
+  --red: #f87171;
+  --shadow: 0 1px 3px rgba(0,0,0,.3);
+  --hover-bg: #2a2a2a;
+  --active-bg: #1a2e24;
+  --tag-inv-bg: #3b3510;
+  --tag-inv-c: #fbbf24;
+  --tag-listed-bg: #1e3a5f;
+  --tag-listed-c: #93c5fd;
+  --tag-sold-bg: #14532d;
+  --tag-sold-c: #86efac;
+  --tag-lost-bg: #450a0a;
+  --tag-lost-c: #fca5a5;
+  --exp-tag-bg: #1a2e24;
+  --badge-bg: #1a2e24;
+  --modal-overlay: rgba(0,0,0,.7);
+}
+html { font-size: 15px; }
+body { font-family: var(--font); background: var(--bg); color: var(--text); display: flex; min-height: 100vh; }
+a { color: var(--primary); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* Sidebar */
+.sidebar {
+  width: 220px; background: var(--surface); border-right: 1px solid var(--border);
+  padding: 24px 0; display: flex; flex-direction: column; position: fixed; top: 0; left: 0; bottom: 0; z-index: 10;
+}
+.sidebar h1 { font-size: 1.15rem; padding: 0 20px 20px; border-bottom: 1px solid var(--border); margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+.sidebar h1 span { font-size: 1.3rem; }
+.sidebar nav { flex: 1; }
+.sidebar a {
+  display: flex; align-items: center; gap: 10px; padding: 10px 20px; color: var(--text); text-decoration: none;
+  font-size: .9rem; border-left: 3px solid transparent; transition: .15s;
+}
+.sidebar a:hover { background: var(--hover-bg); text-decoration: none; }
+.sidebar a.active { background: var(--active-bg); border-left-color: var(--primary); font-weight: 600; color: var(--primary); }
+.sidebar .nav-icon { width: 18px; text-align: center; font-size: 1rem; }
+.sidebar .footer-link { margin-top: auto; font-size: .8rem; color: var(--text-muted); padding: 12px 20px; border-top: 1px solid var(--border); }
+
+/* Sidebar buttons */
+.footer-section { padding: 8px 0; border-top: 1px solid var(--border); display: flex; flex-direction: column; }
+.side-btn {
+  display: flex; align-items: center; gap: 10px; padding: 8px 20px; border: none; background: none;
+  cursor: pointer; font-size: .8rem; color: var(--text-muted); font-family: inherit; transition: .15s; text-align: left;
+}
+.side-btn:hover { color: var(--text); background: var(--hover-bg); }
+.side-btn .nav-icon { width: 18px; text-align: center; font-size: .9rem; }
+#file-dot { color: var(--text-muted); }
+#file-status { font-size: .7rem; color: var(--text-muted); }
+
+/* Main */
+.main { margin-left: 220px; flex: 1; padding: 32px 40px; max-width: calc(100vw - 220px); }
+.page { display: none; }
+.page.active { display: block; }
+.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+.page-header h2 { font-size: 1.5rem; font-weight: 700; }
+
+/* Cards */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); }
+.card-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.stat-card { text-align: center; padding: 20px 16px; display:flex; flex-direction:column; align-items:center; gap:6px; }
+.stat-card .stat-value { font-size: 1.8rem; font-weight: 700; }
+.stat-card .stat-label { font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted); line-height: 1.4; }
+.stat-card .stat-sub { font-size: .75rem; color: var(--text-muted); margin-top: 4px; }
+.positive { color: var(--green); }
+.negative { color: var(--red); }
+.neutral { color: var(--text); }
+
+/* Buttons */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px; padding: 8px 18px; border-radius: var(--radius);
+  font-size: .85rem; font-weight: 500; cursor: pointer; border: 1px solid var(--border);
+  background: var(--surface); color: var(--text); transition: .15s; font-family: inherit;
+}
+.btn:hover { background: var(--hover-bg); }
+.btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); }
+.btn-primary:hover { background: var(--primary-hover); }
+.btn-danger { background: var(--danger); color: #fff; border-color: var(--danger); }
+.btn-danger:hover { opacity: .85; }
+.btn-sm { padding: 5px 12px; font-size: .8rem; }
+.btn-group { display: flex; gap: 6px; }
+
+/* Table */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; }
+th { font-weight: 600; font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted); }
+tr:hover td { background: var(--hover-bg); }
+td.actions { text-align: right; }
+.tag {
+  display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: .75rem; font-weight: 500;
+}
+.tag-sold { background: var(--tag-sold-bg); color: var(--tag-sold-c); }
+.tag-inventory { background: var(--tag-inv-bg); color: var(--tag-inv-c); }
+.tag-listed { background: var(--tag-listed-bg); color: var(--tag-listed-c); }
+.tag-donated, .tag-lost { background: var(--tag-lost-bg); color: var(--tag-lost-c); }
+
+/* Modal */
+.modal-overlay { display: none; position: fixed; inset: 0; background: var(--modal-overlay); z-index: 100; align-items: center; justify-content: center; }
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--surface); border-radius: var(--radius); width: 90%; max-width: 600px; max-height: 85vh;
+  overflow-y: auto; padding: 28px; box-shadow: 0 8px 32px rgba(0,0,0,.15);
+}
+.modal h3 { font-size: 1.2rem; margin-bottom: 20px; }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.form-grid .full-col { grid-column: 1 / -1; }
+.form-group { display: flex; flex-direction: column; gap: 4px; }
+.form-group label { font-size: .8rem; font-weight: 500; color: var(--text-muted); }
+.form-group input, .form-group select, .form-group textarea {
+  padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: .85rem;
+  font-family: inherit; background: var(--surface); color: var(--text);
+}
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: 2px solid var(--primary); outline-offset: -1px; }
+.form-group textarea { resize: vertical; min-height: 60px; }
+.form-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+
+/* Reports */
+.report-section { margin-bottom: 24px; }
+.report-section h3 { font-size: 1rem; margin-bottom: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; }
+.report-table { font-size: .9rem; }
+.report-table td:last-child { text-align: right; font-weight: 600; }
+.report-total td { font-weight: 700; border-top: 2px solid var(--text); font-size: 1rem; }
+
+/* Misc */
+.empty-state { text-align: center; padding: 48px 20px; color: var(--text-muted); }
+.empty-state p { font-size: .95rem; margin-bottom: 12px; }
+.badge { font-size: .7rem; padding: 2px 8px; border-radius: 10px; background: var(--badge-bg); color: var(--primary); }
+.filters { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
+.filters select, .filters input { padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: .8rem; font-family: inherit; background: var(--surface); }
+.filters .btn { margin-left: auto; }
+/* Scanner */
+.scanner-view { text-align:center; }
+.scanner-video { max-width:100%; border-radius:8px; background:#000; max-height:320px; width:100%; }
+.scanner-placeholder { padding:32px 20px; color:var(--text-muted); }
+.scanner-icon { font-size:2rem; margin-bottom:12px; }
+.scanner-actions { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-top:12px; }
+.scanner-or { display:flex; gap:4px; align-items:center; }
+.or-text { font-size:.85rem; color:var(--text-muted); }
+.scanner-upc-input { width:120px; padding:6px 10px; border:1px solid var(--border); border-radius:6px; font-size:.85rem; font-family:inherit; background:var(--surface); color:var(--text); }
+.scanner-result { margin-top:12px; }
+.scanner-name-edit { display:flex; gap:6px; align-items:center; flex-wrap:wrap; justify-content:center; margin-top:8px; }
+.scanner-name-edit input { flex:1; min-width:140px; padding:8px 10px; border:1px solid var(--border); border-radius:6px; font-size:.9rem; font-family:inherit; background:var(--surface); color:var(--text); }
+
+@media (max-width: 768px) {
+  .sidebar {
+    position: fixed; bottom: 0; left: 0; top: auto; right: 0;
+    width: 100%; height: auto; flex-direction: row;
+    border-radius: 0; border-right: none; border-top: 1px solid var(--border);
+    padding: 0; z-index: 100;
+    display: flex; align-items: stretch;
+  }
+  .sidebar h1 { display: none; }
+  .sidebar nav { flex-direction: row; display: flex; flex: 1; }
+  .sidebar nav a {
+    flex: 1; flex-direction: column; align-items: center; justify-content: center;
+    padding: 6px 4px; gap: 1px; font-size: .6rem; min-height: 48px;
+  }
+  .sidebar nav a .nav-icon { font-size: 1.2rem; width: auto; }
+  .sidebar nav a.active { border-left: none; border-top: 2px solid var(--primary); }
+  .sidebar .footer-section { display: none; }
+  .sidebar .footer-link { display: none; }
+  .main { margin-left: 0; margin-bottom: 52px; padding: 16px; max-width: 100%; }
+  .form-grid { grid-template-columns: 1fr; }
+  .card-row { grid-template-columns: 1fr; }
+  .card-row[style*="1fr 1fr"] { grid-template-columns: 1fr !important; }
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .table-wrap table { font-size: .8rem; }
+  .table-wrap th, .table-wrap td { padding: 8px 6px; white-space: nowrap; }
+  .stat-card { padding: 14px 12px; }
+  .stat-card .stat-value { font-size: 1.3rem; }
+  .modal { margin: 10px; padding: 16px; max-height: 90vh; overflow-y: auto; }
+  .modal .form-grid { grid-template-columns: 1fr; }
+  .filters { gap: 6px; }
+  .page-header { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .report-section .card-row[style*="1fr 1fr 1fr"] { grid-template-columns: 1fr !important; }
+  .scanner-video { max-height:45vh; }
+  .scanner-actions { flex-direction:column; align-items:stretch; }
+  .scanner-actions .btn { justify-content:center; }
+  .scanner-or { justify-content:center; flex-wrap:wrap; }
+  .scanner-upc-input { flex:1; min-width:0; }
+}
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <h1><span>🔄</span> FlipTracker</h1>
+  <nav>
+    <a href="#" data-page="dashboard" class="active"><span class="nav-icon">📊</span> <span>Dashboard</span></a>
+    <a href="#" data-page="items"><span class="nav-icon">📦</span> <span>Items</span></a>
+    <a href="#" data-page="expenses"><span class="nav-icon">💸</span> <span>Expenses</span></a>
+    <a href="#" data-page="scanner"><span class="nav-icon">📷</span> <span>Scan</span></a>
+    <a href="#" data-page="mileage"><span class="nav-icon">🚗</span> <span>Mileage</span></a>
+    <a href="#" data-page="reports"><span class="nav-icon">📋</span> <span>Tax Reports</span></a>
+    <a href="#" data-page="settings"><span class="nav-icon">⚙️</span> <span>Settings</span></a>
+  </nav>
+  <div class="footer-section">
+    <button class="side-btn" onclick="connectFolder()" title="Connect Google Drive folder">
+      <span class="nav-icon">📁</span> <span>Connect Folder</span>
+    </button>
+    <div style="padding: 2px 20px; font-size: .7rem; display: flex; align-items: center; gap: 4px;">
+      <span style="font-size: 8px;" id="file-dot">●</span>
+      <span id="file-status" title="Click Connect Folder to change">Not connected</span>
+    </div>
+    <button class="side-btn" onclick="toggleDark()" title="Toggle dark mode">
+      <span class="nav-icon" id="dark-icon">🌙</span> <span id="dark-label">Dark</span>
+    </button>
+    <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
+    <button class="side-btn" onclick="exportData()" title="Download all data as JSON">
+      <span class="nav-icon">⬇</span> <span>Export Data</span>
+    </button>
+    <button class="side-btn" onclick="document.getElementById('import-file').click()" title="Import JSON data from another device">
+      <span class="nav-icon">⬆</span> <span>Import Data</span>
+    </button>
+  </div>
+  <div class="footer-link">FlipTracker v2.0</div>
+</aside>
+
+<main class="main">
+  <!-- ============================== DASHBOARD ============================== -->
+  <div class="page active" id="page-dashboard">
+    <div class="page-header"><h2>Dashboard</h2></div>
+    <div class="card-row" id="dash-stats"></div>
+    <div class="card-row" style="grid-template-columns:1fr 1fr;">
+      <div class="card">
+        <h3 style="font-size:.85rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);margin-bottom:12px;">Recent Sales</h3>
+        <div id="dash-recent-sales"><div class="empty-state"><p>No sales yet</p></div></div>
+      </div>
+      <div class="card">
+        <h3 style="font-size:.85rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);margin-bottom:12px;">Inventory Snapshot</h3>
+        <div id="dash-inventory"><div class="empty-state"><p>No items yet</p></div></div>
+      </div>
+    </div>
+    <div id="dash-analytics"></div>
+  </div>
+
+  <!-- ============================== ITEMS ============================== -->
+  <div class="page" id="page-items">
+    <div class="page-header">
+      <h2>Items</h2>
+      <button class="btn btn-primary" onclick="openItemModal()">+ New Item</button>
+    </div>
+    <div class="filters">
+      <select id="filter-item-status" onchange="renderItems()"><option value="">All Status</option></select>
+      <select id="filter-item-category" onchange="renderItems()"><option value="">All Categories</option></select>
+      <input type="text" id="filter-item-q" placeholder="Search..." oninput="renderItems()" style="width:180px;">
+      <span style="font-size:.8rem;color:var(--text-muted);margin-left:auto;" id="items-count"></span>
+    </div>
+    <div class="card table-wrap">
+      <table><thead><tr>
+        <th>Item</th><th>Category</th><th>Cost</th><th>Source</th><th>Status</th><th>Sold For</th><th>Net</th><th>Date</th><th></th>
+      </tr></thead><tbody id="items-tbody"></tbody></table>
+    </div>
+  </div>
+
+  <!-- ============================== EXPENSES ============================== -->
+  <div class="page" id="page-expenses">
+    <div class="page-header">
+      <h2>Expenses</h2>
+      <button class="btn btn-primary" onclick="openExpenseModal()">+ New Expense</button>
+    </div>
+    <div class="filters">
+      <select id="filter-expense-category" onchange="renderExpenses()"><option value="">All Categories</option></select>
+      <span style="font-size:.8rem;color:var(--text-muted);margin-left:auto;" id="expenses-count"></span>
+    </div>
+    <div class="card table-wrap">
+      <table><thead><tr>
+        <th>Date</th><th>Category</th><th>Description</th><th>Amount</th><th></th>
+      </tr></thead><tbody id="expenses-tbody"></tbody></table>
+    </div>
+  </div>
+
+  <!-- ============================== SCANNER ============================== -->
+  <div class="page" id="page-scanner">
+    <div class="page-header">
+      <h2>Barcode Scanner</h2>
+      <button class="btn btn-sm" onclick="clearScannedItems()" style="color:var(--danger)">Clear History</button>
+    </div>
+    <div class="card scanner-card">
+      <div id="scanner-view" class="scanner-view">
+        <video id="scanner-video" autoplay playsinline class="scanner-video" style="display:none;"></video>
+        <div id="scanner-placeholder" class="scanner-placeholder">
+          <p class="scanner-icon">📷</p>
+          <p>Scan a barcode to look up product info and auto-fill an item.</p>
+        </div>
+        <div class="scanner-actions">
+          <button class="btn btn-primary" onclick="document.getElementById('scanner-photo-input').click()">📸 Scan Barcode</button>
+          <button class="btn" id="scanner-start-btn" onclick="startScanner()">Live Camera</button>
+          <button class="btn" id="scanner-stop-btn" onclick="stopScanner()" style="display:none;">Stop Camera</button>
+          <input type="file" id="scanner-photo-input" accept="image/*" capture="environment" style="display:none" onchange="scanPhoto(event)">
+          <span class="scanner-or">
+            <span class="or-text">or</span>
+            <input type="text" id="scanner-manual" class="scanner-upc-input" placeholder="Enter UPC">
+            <button class="btn btn-sm" onclick="lookupManual()">Lookup</button>
+          </span>
+        </div>
+        <div id="scanner-result" class="scanner-result"></div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:12px;">
+      <h3>Scanned Items</h3>
+      <div class="table-wrap">
+        <table><thead><tr><th>UPC</th><th>Product</th><th>Date</th><th></th></tr></thead>
+          <tbody id="scanned-items-tbody"></tbody>
+        </table>
+      </div>
+      <div id="scanned-items-empty" class="empty-state"><p>No scans yet</p></div>
+    </div>
+  </div>
+
+  <!-- ============================== MILEAGE ============================== -->
+  <div class="page" id="page-mileage">
+    <div class="page-header">
+      <h2>Mileage Log</h2>
+      <button class="btn btn-primary" onclick="openMileageModal()">+ New Trip</button>
+    </div>
+    <div class="card">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:16px;" id="mileage-summary"></div>
+      <div class="filters">
+        <select id="filter-mileage-year" onchange="renderMileage()" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:.85rem;"></select>
+        <span style="font-size:.8rem;color:var(--text-muted);margin-left:auto;" id="mileage-count"></span>
+      </div>
+      <div class="table-wrap">
+        <table><thead><tr>
+          <th>Date</th><th>Purpose</th><th>Start</th><th>End</th><th>Miles</th><th>Deductible</th><th></th>
+        </tr></thead><tbody id="mileage-tbody"></tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================== REPORTS ============================== -->
+  <div class="page" id="page-reports">
+    <div class="page-header">
+      <h2>Tax Reports</h2>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <select id="report-year" onchange="renderReport()" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:.85rem;"></select>
+        <button class="btn btn-sm" onclick="openPartnerModal()">👥 Partners</button>
+        <button class="btn btn-sm" onclick="exportCSV()">⬇ CSV</button>
+        <button class="btn btn-sm btn-primary" onclick="exportData()">⬇ Export All</button>
+        <button class="btn btn-sm" onclick="document.getElementById('import-file').click()">⬆ Import</button>
+      </div>
+    </div>
+    <div id="report-content"></div>
+  </div>
+
+  <!-- ============================== SETTINGS ============================== -->
+  <div class="page" id="page-settings">
+    <div class="page-header"><h2>Cloud Sync</h2></div>
+    <div class="card">
+      <p style="font-size:.85rem;color:var(--text-muted);margin-bottom:16px;">
+        Set up Firebase Realtime Database to sync data between your devices.
+        <a href="#" onclick="showFirebaseHelp()" style="color:var(--primary);">Show setup guide</a>
+      </p>
+      <div id="firebase-help" style="display:none;background:var(--hover-bg);padding:16px;border-radius:8px;font-size:.82rem;margin-bottom:16px;">
+        <ol style="margin-left:20px;display:flex;flex-direction:column;gap:6px;">
+          <li>Go to <a href="https://console.firebase.google.com" target="_blank">Firebase Console</a> (use your Google account)</li>
+          <li>Create a project → skip Analytics</li>
+          <li>Go to Build → Realtime Database → Create Database</li>
+          <li>Start in <strong>test mode</strong> → Enable</li>
+          <li>Copy your database URL (looks like <code>https://xxx-default-rtdb.firebaseio.com</code>)</li>
+          <li>Go to Project Settings → General → Web apps → Register web app</li>
+          <li>Copy the <code>apiKey</code> and paste both below</li>
+        </ol>
+      </div>
+      <div class="form-group">
+        <label>Firebase Database URL</label>
+        <input type="text" id="firebase-url" class="form-input" placeholder="https://xxx-default-rtdb.firebaseio.com" style="padding:8px 10px;font-family:monospace;font-size:.82rem;">
+      </div>
+      <div class="form-group">
+        <label>Firebase API Key</label>
+        <input type="text" id="firebase-key" class="form-input" placeholder="AIzaSy..." style="padding:8px 10px;font-family:monospace;font-size:.82rem;">
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px;">
+        <button class="btn btn-primary" onclick="saveFirebaseConfig()">Save & Sync Now</button>
+        <button class="btn" onclick="testFirebase()">Test Connection</button>
+        <button class="btn" onclick="clearFirebaseConfig()" style="color:var(--danger)">Disconnect</button>
+      </div>
+      <div id="sync-status" style="margin-top:12px;font-size:.85rem;color:var(--text-muted);"></div>
+      <div id="sync-last-updated" style="margin-top:4px;font-size:.75rem;color:var(--text-muted);"></div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ============================== ITEM MODAL ============================== -->
+<div class="modal-overlay" id="item-modal">
+  <div class="modal">
+    <h3 id="item-modal-title">New Item</h3>
+    <form id="item-form" onsubmit="saveItem(event)">
+      <input type="hidden" id="item-id">
+      <div class="form-grid">
+        <div class="form-group full-col"><label>Item Name *</label><input type="text" id="item-name" required></div>
+        <div class="form-group"><label>Category</label><select id="item-category"></select></div>
+        <div class="form-group"><label>Condition</label><select id="item-condition">
+          <option value="New">New</option><option value="Like New">Like New</option>
+          <option value="Good" selected>Good</option><option value="Fair">Fair</option><option value="Poor">Poor</option>
+        </select></div>
+        <div class="form-group"><label>Purchase Price *</label><input type="number" id="item-cost" step="0.01" min="0" required></div>
+        <div class="form-group"><label>Purchase Date *</label><input type="date" id="item-purchase-date" required></div>
+        <div class="form-group"><label>Sourced From</label><select id="item-source"></select></div>
+        <div class="form-group"><label>Status</label><select id="item-status" onchange="toggleSaleFields()">
+          <option value="inventory">Inventory</option><option value="listed">Listed</option>
+          <option value="sold">Sold</option><option value="donated">Donated</option><option value="lost">Lost</option>
+        </select></div>
+        <div class="form-group"><label>Sale Price</label><input type="number" id="item-sale-price" step="0.01" min="0"></div>
+        <div class="form-group"><label>Sale Date</label><input type="date" id="item-sale-date"></div>
+        <div class="form-group"><label>Sold On</label><select id="item-sold-on"></select></div>
+        <div class="form-group"><label>Platform Fees</label><input type="number" id="item-fees" step="0.01" min="0" value="0"></div>
+        <div class="form-group"><label>Shipping Cost</label><input type="number" id="item-shipping" step="0.01" min="0" value="0"></div>
+        <div class="form-group full-col"><label>Notes</label><textarea id="item-notes" rows="2"></textarea></div>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn" onclick="closeModal('item-modal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============================== EXPENSE MODAL ============================== -->
+<div class="modal-overlay" id="expense-modal">
+  <div class="modal">
+    <h3 id="expense-modal-title">New Expense</h3>
+    <form id="expense-form" onsubmit="saveExpense(event)">
+      <input type="hidden" id="expense-id">
+      <div class="form-grid">
+        <div class="form-group full-col"><label>Description *</label><input type="text" id="expense-description" required></div>
+        <div class="form-group"><label>Category *</label><select id="expense-category"></select></div>
+        <div class="form-group"><label>Amount *</label><input type="number" id="expense-amount" step="0.01" min="0" required></div>
+        <div class="form-group"><label>Date *</label><input type="date" id="expense-date" required></div>
+        <div class="form-group full-col"><label>Notes</label><textarea id="expense-notes" rows="2"></textarea></div>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn" onclick="closeModal('expense-modal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============================== PARTNER MODAL ============================== -->
+<div class="modal-overlay" id="partner-modal">
+  <div class="modal" style="max-width:450px;">
+    <h3>Manage Partners</h3>
+    <p style="font-size:.85rem;color:var(--text-muted);margin-bottom:16px;">Add partners and their ownership %. Total must equal 100%.</p>
+    <div id="partner-list"></div>
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      <input type="text" id="partner-name" placeholder="Name" style="flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:.85rem;font-family:inherit;background:var(--surface);color:var(--text);">
+      <input type="number" id="partner-pct" placeholder="%" min="1" max="100" style="width:70px;padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:.85rem;font-family:inherit;background:var(--surface);color:var(--text);">
+      <button class="btn btn-primary btn-sm" onclick="addPartner()">Add</button>
+    </div>
+    <div style="margin-top:8px;font-size:.8rem;color:var(--text-muted);text-align:right;" id="partner-total"></div>
+    <div class="form-actions">
+      <button type="button" class="btn" onclick="closeModal('partner-modal');loadPartners();">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================== MILEAGE MODAL ============================== -->
+<div class="modal-overlay" id="mileage-modal">
+  <div class="modal" style="max-width:450px;">
+    <h3 id="mileage-modal-title">New Trip</h3>
+    <input type="hidden" id="mileage-id">
+    <div class="form-group">
+      <label class="form-label" for="mileage-date">Date</label>
+      <input type="date" id="mileage-date" class="form-input" required>
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="mileage-purpose">Purpose</label>
+      <select id="mileage-purpose" class="form-input">
+        <option value="Thrift Shopping">Thrift Shopping</option>
+        <option value="Shipment Drop-off">Shipment Drop-off</option>
+        <option value="Supply Run">Supply Run</option>
+        <option value="Meeting">Meeting</option>
+        <option value="Other">Other</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="mileage-start">Starting Location</label>
+      <input type="text" id="mileage-start" class="form-input" placeholder="e.g. Home, 123 Main St">
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="mileage-end">Ending Location</label>
+      <input type="text" id="mileage-end" class="form-input" placeholder="e.g. Goodwill, Post Office">
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="mileage-miles">Miles Driven</label>
+      <input type="number" id="mileage-miles" class="form-input" step="0.1" min="0" required>
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="mileage-notes">Notes</label>
+      <input type="text" id="mileage-notes" class="form-input" placeholder="Optional">
+    </div>
+    <div class="form-actions">
+      <button type="button" class="btn" onclick="closeModal('mileage-modal')">Cancel</button>
+      <button type="button" class="btn btn-primary" onclick="saveMileage()">Save Trip</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ========================== DATA LAYER ==========================
+const APP_VERSION = '2026-07-02d';
+
+const STORE_ITEMS = 'fliptracker_items';
+const STORE_EXPENSES = 'fliptracker_expenses';
+const STORE_PARTNERS = 'fliptracker_partners';
+const STORE_MILEAGE = 'fliptracker_mileage';
+const STORE_SCANS = 'fliptracker_scans';
+const DB_NAME = 'fliptracker';
+const HANDLE_STORE = 'handles';
+
+function lsLoad(key) {
+  try { return JSON.parse(localStorage.getItem(key)) || []; } catch { return []; }
+}
+function lsSave(key, data) {
+  localStorage.setItem(key, JSON.stringify(data));
+}
+
+function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+function today() { return new Date().toISOString().slice(0, 10); }
+
+function getItems() { return lsLoad(STORE_ITEMS); }
+function setItems(v) { lsSave(STORE_ITEMS, v); syncFile(); }
+
+function getExpenses() { return lsLoad(STORE_EXPENSES); }
+function setExpenses(v) { lsSave(STORE_EXPENSES, v); syncFile(); }
+
+function getPartners() { return lsLoad(STORE_PARTNERS); }
+function setPartners(v) { lsSave(STORE_PARTNERS, v); syncFile(); }
+
+function getMileage() { return lsLoad(STORE_MILEAGE); }
+function setMileage(v) { lsSave(STORE_MILEAGE, v); syncFile(); }
+
+function getScans() { return lsLoad(STORE_SCANS); }
+function setScans(v) { lsSave(STORE_SCANS, v); syncFile(); }
+
+// ========================== FIREBASE CLOUD SYNC ==========================
+const STORE_FB_URL = 'fliptracker_fb_url';
+const STORE_FB_KEY = 'fliptracker_fb_key';
+
+function getFirebaseConfig() {
+  return { url: localStorage.getItem(STORE_FB_URL) || '', key: localStorage.getItem(STORE_FB_KEY) || '' };
+}
+
+function saveFirebaseConfig() {
+  const url = document.getElementById('firebase-url').value.trim().replace(/\/$/, '');
+  const key = document.getElementById('firebase-key').value.trim();
+  localStorage.setItem(STORE_FB_URL, url);
+  localStorage.setItem(STORE_FB_KEY, key);
+  document.getElementById('sync-status').innerHTML = '<span style="color:var(--green);">Saved! Syncing data...</span>';
+  startFirebasePoll();
+  loadFromFirebase().then(found => {
+    if (found) { renderDashboard(); renderItems(); renderExpenses(); renderMileage(); renderScannedItems(); }
+    syncToFirebase();
+  });
+}
+
+function clearFirebaseConfig() {
+  localStorage.removeItem(STORE_FB_URL);
+  localStorage.removeItem(STORE_FB_KEY);
+  document.getElementById('firebase-url').value = '';
+  document.getElementById('firebase-key').value = '';
+  document.getElementById('sync-status').innerHTML = 'Disconnected.';
+}
+
+function loadFirebaseConfig() {
+  const cfg = getFirebaseConfig();
+  document.getElementById('firebase-url').value = cfg.url;
+  document.getElementById('firebase-key').value = cfg.key;
+}
+
+function showFirebaseHelp() {
+  const el = document.getElementById('firebase-help');
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+function getSyncData() {
+  return {
+    items: getItems(),
+    expenses: getExpenses(),
+    partners: getPartners(),
+    mileage: getMileage(),
+    scans: getScans(),
+    syncedAt: new Date().toISOString()
+  };
+}
+
+async function syncToFirebase() {
+  const cfg = getFirebaseConfig();
+  if (!cfg.url || !cfg.key) return;
+  const data = getSyncData();
+  try {
+    const res = await fetch(cfg.url + '/data.json?auth=' + cfg.key, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    if (res.ok) {
+      localStorage.setItem('fliptracker_last_sync', data.syncedAt);
+      updateSyncStatus('synced');
+    } else {
+      updateSyncStatus('error');
+    }
+  } catch {
+    updateSyncStatus('error');
+  }
+}
+
+async function loadFromFirebase() {
+  const cfg = getFirebaseConfig();
+  if (!cfg.url || !cfg.key) return false;
+  try {
+    const res = await fetch(cfg.url + '/data.json?auth=' + cfg.key);
+    if (!res.ok) return false;
+    const data = await res.json();
+    if (!data || !data.items) return false;
+    const lastSync = localStorage.getItem('fliptracker_last_sync') || '';
+    let shouldApply = false;
+    if (data.syncedAt && data.syncedAt > lastSync) {
+      shouldApply = true;
+    } else {
+      const local = getSyncData();
+      const remoteKey = k => JSON.stringify(data[k] || []);
+      const localKey = k => JSON.stringify(local[k] || []);
+      if (remoteKey('items') !== localKey('items') ||
+          remoteKey('expenses') !== localKey('expenses') ||
+          remoteKey('mileage') !== localKey('mileage') ||
+          remoteKey('scans') !== localKey('scans') ||
+          remoteKey('partners') !== localKey('partners')) {
+        shouldApply = true;
+      }
+    }
+    if (!shouldApply) return false;
+    if (data.items) lsSave(STORE_ITEMS, data.items);
+    if (data.expenses) lsSave(STORE_EXPENSES, data.expenses);
+    if (data.partners) lsSave(STORE_PARTNERS, data.partners || []);
+    if (data.mileage) lsSave(STORE_MILEAGE, data.mileage);
+    if (data.scans) lsSave(STORE_SCANS, data.scans || []);
+    localStorage.setItem('fliptracker_last_sync', data.syncedAt);
+    return true;
+  } catch { return false; }
+}
+
+async function testFirebase() {
+  const cfg = getFirebaseConfig();
+  const url = document.getElementById('firebase-url').value.trim().replace(/\/$/, '');
+  const key = document.getElementById('firebase-key').value.trim();
+  if (!url || !key) { document.getElementById('sync-status').innerHTML = '<span style="color:var(--danger);">Enter both URL and API key</span>'; return; }
+  document.getElementById('sync-status').innerHTML = 'Testing connection...';
+  try {
+    const res = await fetch(url + '/.json?auth=' + key + '&shallow=true');
+    if (res.ok) {
+      document.getElementById('sync-status').innerHTML = '<span style="color:var(--green);">Connection OK! Save to enable auto-sync.</span>';
+    } else {
+      const err = await res.text();
+      document.getElementById('sync-status').innerHTML = `<span style="color:var(--danger);">Error: ${res.status} ${err.slice(0,100)}</span>`;
+    }
+  } catch(e) {
+    document.getElementById('sync-status').innerHTML = `<span style="color:var(--danger);">Connection failed: ${e.message}</span>`;
+  }
+}
+
+let _firebasePollTimer = null;
+function startFirebasePoll() {
+  clearInterval(_firebasePollTimer);
+  _firebasePollTimer = setInterval(async () => {
+    const cfg = getFirebaseConfig();
+    if (!cfg.url || !cfg.key) { clearInterval(_firebasePollTimer); return; }
+    try {
+      const lastSync = localStorage.getItem('fliptracker_last_sync') || '';
+      const res = await fetch(cfg.url + '/data.json?auth=' + cfg.key);
+      if (!res.ok) { updateSyncStatus('error'); return; }
+      const data = await res.json();
+      if (!data || !data.items || !data.syncedAt) return;
+      if (data.syncedAt > lastSync) {
+        lsSave(STORE_ITEMS, data.items);
+        if (data.expenses) lsSave(STORE_EXPENSES, data.expenses);
+        if (data.partners) lsSave(STORE_PARTNERS, data.partners || []);
+        if (data.mileage) lsSave(STORE_MILEAGE, data.mileage);
+        if (data.scans) lsSave(STORE_SCANS, data.scans || []);
+        localStorage.setItem('fliptracker_last_sync', data.syncedAt);
+        renderDashboard(); renderItems(); renderExpenses(); renderMileage(); renderScannedItems();
+        updateSyncStatus('synced');
+      }
+    } catch {
+      updateSyncStatus('error');
+    }
+  }, 5000);
+}
+
+function updateSyncStatus(state) {
+  const el = document.getElementById('sync-status');
+  if (!el) return;
+  const now = new Date().toLocaleTimeString();
+  if (state === 'synced') {
+    el.innerHTML = `<span style="color:var(--green);">Last synced: ${now}</span>`;
+    const lastSync = localStorage.getItem('fliptracker_last_sync');
+    const lastEl = document.getElementById('sync-last-updated');
+    if (lastEl && lastSync) {
+      const d = new Date(lastSync);
+      lastEl.textContent = 'Firebase timestamp: ' + d.toLocaleString();
+    }
+  } else if (state === 'error') {
+    el.innerHTML = `<span style="color:var(--danger);">Sync error — check connection</span>`;
+  }
+}
+
+function addPartner() {
+  const name = document.getElementById('partner-name').value.trim();
+  const pct = parseFloat(document.getElementById('partner-pct').value);
+  if (!name || !pct || pct < 1 || pct > 100) return;
+  const partners = getPartners();
+  if (partners.reduce((s, p) => s + p.ownership, 0) + pct > 100) { alert('Total would exceed 100%'); return; }
+  partners.push({ name, ownership: pct });
+  setPartners(partners);
+  document.getElementById('partner-name').value = '';
+  document.getElementById('partner-pct').value = '';
+  renderPartnerList();
+}
+function removePartner(idx) {
+  const partners = getPartners();
+  partners.splice(idx, 1);
+  setPartners(partners);
+  renderPartnerList();
+}
+function renderPartnerList() {
+  const partners = getPartners();
+  const el = document.getElementById('partner-list');
+  const total = partners.reduce((s, p) => s + p.ownership, 0);
+  document.getElementById('partner-total').textContent = partners.length ? 'Total: ' + total + '%' : '';
+  if (!partners.length) { el.innerHTML = '<div style="color:var(--text-muted);padding:12px 0;font-size:.85rem;">No partners configured.</div>'; return; }
+  el.innerHTML = partners.map((p, i) =>
+    `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:.85rem;">
+      <span><strong>${esc(p.name)}</strong> — ${p.ownership}%</span>
+      <button class="btn btn-sm btn-danger" onclick="removePartner(${i})">Remove</button>
+    </div>`
+  ).join('');
+}
+
+// ========================== FILE SYNC (File System Access API) ==========================
+let dirHandle = null;
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = () => { req.result.createObjectStore(HANDLE_STORE); };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function storeHandle(handle) {
+  const db = await openDB();
+  const tx = db.transaction(HANDLE_STORE, 'readwrite');
+  tx.objectStore(HANDLE_STORE).put(handle, 'dirHandle');
+  await new Promise((r, j) => { tx.oncomplete = r; tx.onerror = () => j(tx.error); });
+}
+
+async function loadStoredHandle() {
+  const db = await openDB();
+  const tx = db.transaction(HANDLE_STORE, 'readonly');
+  const req = tx.objectStore(HANDLE_STORE).get('dirHandle');
+  return new Promise((resolve, reject) => {
+    req.onsuccess = () => resolve(req.result || null);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function connectFolder() {
+  if (!('showDirectoryPicker' in window)) {
+    alert('Your browser does not support the File System Access API.\nUse Chrome or Edge, and open via http://localhost:8080 (run serve.command).');
+    return false;
+  }
+  try {
+    dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+    await storeHandle(dirHandle);
+    await readDataFile();
+    updateFileStatus();
+    return true;
+  } catch (e) {
+    if (e.name !== 'AbortError') alert('Could not access folder: ' + e.message);
+    return false;
+  }
+}
+
+async function readDataFile() {
+  if (!dirHandle) return;
+  try {
+    const fileHandle = await dirHandle.getFileHandle('data.json');
+    const file = await fileHandle.getFile();
+    const text = await file.text();
+    if (!text.trim()) return;
+    const data = JSON.parse(text);
+    if (data.items) lsSave(STORE_ITEMS, data.items);
+    if (data.expenses) lsSave(STORE_EXPENSES, data.expenses);
+    if (data.partners) lsSave(STORE_PARTNERS, data.partners);
+    if (data.mileage) lsSave(STORE_MILEAGE, data.mileage);
+    if (data.scans) lsSave(STORE_SCANS, data.scans);
+    if (data.firebaseUrl && data.firebaseKey) {
+      localStorage.setItem(STORE_FB_URL, data.firebaseUrl);
+      localStorage.setItem(STORE_FB_KEY, data.firebaseKey);
+    }
+  } catch (e) {
+    if (e.name === 'NotFoundError') return;
+    console.warn('Read error:', e);
+  }
+}
+
+async function writeDataFile() {
+  if (!dirHandle) return;
+  try {
+    const fileHandle = await dirHandle.getFileHandle('data.json', { create: true });
+    const writable = await fileHandle.createWritable();
+    const fb = getFirebaseConfig();
+    const data = {
+      version: '1.3',
+      updatedAt: new Date().toISOString(),
+    items: getItems(),
+    expenses: getExpenses(),
+    partners: getPartners(),
+    mileage: getMileage(),
+    scans: getScans(),
+    firebaseUrl: fb.url,
+    firebaseKey: fb.key
+    };
+    await writable.write(JSON.stringify(data, null, 2));
+    await writable.close();
+    document.getElementById('file-status').textContent = 'Synced';
+  } catch (e) {
+    console.warn('Write error:', e);
+    document.getElementById('file-status').textContent = 'Sync error';
+  }
+}
+
+let syncTimer = null;
+function syncFile() {
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(writeDataFile, 500);
+  syncToFirebase();
+}
+
+function updateFileStatus() {
+  const el = document.getElementById('file-status');
+  const dot = document.getElementById('file-dot');
+  if (dirHandle) {
+    const name = dirHandle.name || 'Connected';
+    el.textContent = name.length > 18 ? name.slice(0, 15) + '...' : name;
+    el.style.color = 'var(--green)';
+    dot.style.color = 'var(--green)';
+  } else {
+    el.textContent = 'Not connected';
+    el.style.color = 'var(--text-muted)';
+    dot.style.color = 'var(--text-muted)';
+  }
+}
+
+async function restoreHandle() {
+  const stored = await loadStoredHandle();
+  if (stored) {
+    try {
+      const ok = await stored.queryPermission({ mode: 'readwrite' });
+      if (ok === 'granted') {
+        dirHandle = stored;
+        await readDataFile();
+        updateFileStatus();
+        return true;
+      }
+      const req = await stored.requestPermission({ mode: 'readwrite' });
+      if (req === 'granted') {
+        dirHandle = stored;
+        await readDataFile();
+        updateFileStatus();
+        return true;
+      }
+    } catch (e) {
+      console.warn('Handle restore failed:', e);
+    }
+  }
+  return false;
+}
+
+// ========================== CONSTANTS ==========================
+const CATEGORIES = ['Electronics','Clothing','Furniture','Home Goods','Books/Media','Tools','Collectibles','Sports','Toys','Jewelry','Kitchen','Art','Musical Instruments','Baby/Kids','Other'];
+const SOURCES = ['Goodwill','Salvation Army','St. Vinny\'s','Garage Sale','Estate Sale','FB Marketplace','Craigslist','Yard Sale','Thrift Store','Donation','Online','Other'];
+const SELL_PLATFORMS = ['eBay','Poshmark','Mercari','FB Marketplace','Depop','Craigslist','OfferUp','Etsy','Whatnot','Grailed','StockX','Other'];
+const EXPENSE_CATS = ['Shipping Supplies','Gas/Mileage','Storage','Platform Fees','Repairs/Cleaning','Photography','Marketing','Parking/Tolls','Tools','Education','Subscriptions','Other'];
+
+function populateSelect(id, arr, placeholder) {
+  const sel = document.getElementById(id); sel.innerHTML = '';
+  if (placeholder) { const o = document.createElement('option'); o.value = ''; o.textContent = placeholder; sel.appendChild(o); }
+  arr.forEach(v => { const o = document.createElement('option'); o.value = v; o.textContent = v; sel.appendChild(o); });
+}
+function populateFilterSelect(id, arr) {
+  const sel = document.getElementById(id); sel.innerHTML = '';
+  const o = document.createElement('option'); o.value = ''; o.textContent = 'All'; sel.appendChild(o);
+  const seen = new Set();
+  arr.forEach(v => { if (!seen.has(v)) { seen.add(v); const o = document.createElement('option'); o.value = v; o.textContent = v; sel.appendChild(o); } });
+}
+
+// ========================== NAVIGATION ==========================
+document.querySelectorAll('.sidebar a[data-page]').forEach(a => {
+  a.addEventListener('click', e => {
+    e.preventDefault();
+    document.querySelectorAll('.sidebar a').forEach(x => x.classList.remove('active'));
+    a.classList.add('active');
+    const page = a.dataset.page;
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('page-' + page).classList.add('active');
+    if (page === 'dashboard') renderDashboard();
+    if (page === 'items') renderItems();
+    if (page === 'expenses') renderExpenses();
+    if (page === 'scanner') initScanner();
+    if (page === 'mileage') renderMileage();
+    if (page === 'reports') renderReport();
+    if (page === 'settings') loadFirebaseConfig();
+  });
+});
+
+// ========================== ITEMS ==========================
+function openItemModal(item) {
+  const isEdit = !!item;
+  document.getElementById('item-modal-title').textContent = isEdit ? 'Edit Item' : 'New Item';
+  document.getElementById('item-id').value = item ? item.id : '';
+  document.getElementById('item-name').value = item ? item.name : '';
+  document.getElementById('item-category').value = item ? (item.category || '') : '';
+  document.getElementById('item-condition').value = item ? (item.condition || 'Good') : 'Good';
+  document.getElementById('item-cost').value = item ? item.purchasePrice : '';
+  document.getElementById('item-purchase-date').value = item ? item.purchaseDate : today();
+  const srcVal = item ? (item.sourcedFrom || '') : '';
+  const srcSel = document.getElementById('item-source');
+  if (srcVal && !srcSel.querySelector('option[value="' + srcVal.replace(/"/g,'&quot;') + '"]')) {
+    const o = document.createElement('option'); o.value = srcVal; o.textContent = srcVal; srcSel.appendChild(o);
+  }
+  srcSel.value = srcVal;
+  document.getElementById('item-status').value = item ? item.status : 'inventory';
+  document.getElementById('item-sale-price').value = item ? (item.salePrice || '') : '';
+  document.getElementById('item-sale-date').value = item ? (item.saleDate || '') : '';
+  document.getElementById('item-sold-on').value = item ? (item.soldOn || '') : '';
+  document.getElementById('item-fees').value = item ? (item.platformFees || 0) : 0;
+  document.getElementById('item-shipping').value = item ? (item.shippingCost || 0) : 0;
+  document.getElementById('item-notes').value = item ? (item.notes || '') : '';
+  toggleSaleFields();
+  openModal('item-modal');
+}
+
+function toggleSaleFields() {
+  const status = document.getElementById('item-status').value;
+  const show = status === 'sold';
+  ['item-sale-price','item-sale-date','item-sold-on','item-fees','item-shipping'].forEach(id => {
+    const el = document.getElementById(id);
+    el.closest('.form-group').style.display = show ? '' : 'none';
+    if (!show) el.value = show ? el.value : (id === 'item-fees' || id === 'item-shipping' ? '0' : '');
+  });
+}
+
+function saveItem(e) {
+  e.preventDefault();
+  const id = document.getElementById('item-id').value;
+  const items = getItems();
+  const data = {
+    name: document.getElementById('item-name').value.trim(),
+    category: document.getElementById('item-category').value,
+    condition: document.getElementById('item-condition').value,
+    purchasePrice: parseFloat(document.getElementById('item-cost').value) || 0,
+    purchaseDate: document.getElementById('item-purchase-date').value,
+    sourcedFrom: document.getElementById('item-source').value,
+    status: document.getElementById('item-status').value,
+    salePrice: parseFloat(document.getElementById('item-sale-price').value) || null,
+    saleDate: document.getElementById('item-sale-date').value || null,
+    soldOn: document.getElementById('item-sold-on').value || null,
+    platformFees: parseFloat(document.getElementById('item-fees').value) || 0,
+    shippingCost: parseFloat(document.getElementById('item-shipping').value) || 0,
+    notes: document.getElementById('item-notes').value.trim(),
+    updatedAt: new Date().toISOString()
+  };
+  if (id) {
+    const idx = items.findIndex(i => i.id === id);
+    if (idx > -1) { items[idx] = { ...items[idx], ...data }; }
+  } else {
+    data.id = genId();
+    data.createdAt = new Date().toISOString();
+    data.updatedAt = data.createdAt;
+    items.unshift(data);
+  }
+  setItems(items);
+  closeModal('item-modal');
+  renderItems();
+  renderDashboard();
+}
+
+function deleteItem(id) {
+  if (!confirm('Delete this item?')) return;
+  setItems(getItems().filter(i => i.id !== id));
+  renderItems();
+  renderDashboard();
+}
+
+function renderItems() {
+  let items = getItems();
+  const statusFilter = document.getElementById('filter-item-status').value;
+  const catFilter = document.getElementById('filter-item-category').value;
+  const q = document.getElementById('filter-item-q').value.toLowerCase();
+  if (statusFilter) items = items.filter(i => i.status === statusFilter);
+  if (catFilter) items = items.filter(i => i.category === catFilter);
+  if (q) items = items.filter(i => i.name.toLowerCase().includes(q) || (i.notes||'').toLowerCase().includes(q));
+
+  document.getElementById('items-count').textContent = items.length + ' item' + (items.length !== 1 ? 's' : '');
+  const tbody = document.getElementById('items-tbody');
+  if (!items.length) { tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state"><p>No items yet</p></div></td></tr>'; return; }
+
+  tbody.innerHTML = items.map(i => {
+    const salePrice = i.status === 'sold' && i.salePrice != null ? i.salePrice : null;
+    const net = salePrice != null ? salePrice - i.purchasePrice - (i.platformFees||0) - (i.shippingCost||0) : null;
+    const cls = i.status === 'sold' ? 'tag-sold' : i.status === 'inventory' ? 'tag-inventory' : i.status === 'listed' ? 'tag-listed' : 'tag-donated';
+    return `<tr>
+      <td><strong>${esc(i.name)}</strong>${i.notes ? '<br><span style="font-size:.75rem;color:var(--text-muted)">'+esc(i.notes.slice(0,50))+'</span>' : ''}</td>
+      <td>${esc(i.category||'—')}</td>
+      <td>$${fmt(i.purchasePrice)}</td>
+      <td>${esc(i.sourcedFrom||'—')}</td>
+      <td><span class="tag ${cls}">${i.status}</span></td>
+      <td>${salePrice != null ? '$'+fmt(salePrice) : '—'}</td>
+      <td class="${net != null ? (net >= 0 ? 'positive' : 'negative') : ''}">${net != null ? '$'+fmt(net) : '—'}</td>
+      <td style="font-size:.8rem;color:var(--text-muted)">${i.saleDate || i.purchaseDate}</td>
+      <td class="actions">
+        <button class="btn btn-sm" onclick="openItemModal(getItems().find(x=>x.id==='${i.id}'))">Edit</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteItem('${i.id}')">Del</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ========================== EXPENSES ==========================
+function openExpenseModal(exp) {
+  document.getElementById('expense-modal-title').textContent = exp ? 'Edit Expense' : 'New Expense';
+  document.getElementById('expense-id').value = exp ? exp.id : '';
+  document.getElementById('expense-description').value = exp ? exp.description : '';
+  document.getElementById('expense-category').value = exp ? (exp.category || '') : '';
+  document.getElementById('expense-amount').value = exp ? exp.amount : '';
+  document.getElementById('expense-date').value = exp ? exp.date : today();
+  document.getElementById('expense-notes').value = exp ? (exp.notes || '') : '';
+  openModal('expense-modal');
+}
+
+function saveExpense(e) {
+  e.preventDefault();
+  const id = document.getElementById('expense-id').value;
+  const expenses = getExpenses();
+  const data = {
+    description: document.getElementById('expense-description').value.trim(),
+    category: document.getElementById('expense-category').value,
+    amount: parseFloat(document.getElementById('expense-amount').value) || 0,
+    date: document.getElementById('expense-date').value,
+    notes: document.getElementById('expense-notes').value.trim(),
+    updatedAt: new Date().toISOString()
+  };
+  if (id) {
+    const idx = expenses.findIndex(e => e.id === id);
+    if (idx > -1) expenses[idx] = { ...expenses[idx], ...data };
+  } else {
+    data.id = genId();
+    data.createdAt = new Date().toISOString();
+    data.updatedAt = data.createdAt;
+    expenses.unshift(data);
+  }
+  setExpenses(expenses);
+  closeModal('expense-modal');
+  renderExpenses();
+  renderDashboard();
+}
+
+function deleteExpense(id) {
+  if (!confirm('Delete this expense?')) return;
+  setExpenses(getExpenses().filter(e => e.id !== id));
+  renderExpenses();
+  renderDashboard();
+}
+
+function renderExpenses() {
+  let expenses = getExpenses();
+  const catFilter = document.getElementById('filter-expense-category').value;
+  if (catFilter) expenses = expenses.filter(e => e.category === catFilter);
+
+  document.getElementById('expenses-count').textContent = expenses.length + ' expense' + (expenses.length !== 1 ? 's' : '');
+  const tbody = document.getElementById('expenses-tbody');
+  if (!expenses.length) { tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state"><p>No expenses yet</p></div></td></tr>'; return; }
+
+  tbody.innerHTML = expenses.map(e => `<tr>
+    <td style="font-size:.8rem;color:var(--text-muted)">${e.date}</td>
+    <td><span class="tag" style="background:var(--exp-tag-bg);color:var(--primary)">${esc(e.category)}</span></td>
+    <td>${esc(e.description)}${e.notes ? '<br><span style="font-size:.75rem;color:var(--text-muted)">'+esc(e.notes.slice(0,60))+'</span>' : ''}</td>
+    <td class="negative">-$${fmt(e.amount)}</td>
+    <td class="actions">
+      <button class="btn btn-sm" onclick="openExpenseModal(getExpenses().find(x=>x.id==='${e.id}'))">Edit</button>
+      <button class="btn btn-sm btn-danger" onclick="deleteExpense('${e.id}')">Del</button>
+    </td>
+  </tr>`).join('');
+}
+
+// ========================== DASHBOARD ==========================
+function renderDashboard() {
+  const items = getItems();
+  const expenses = getExpenses();
+  const now = new Date();
+  const thisMonth = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+
+  const sold = items.filter(i => i.status === 'sold' && i.salePrice != null);
+  const totalRevenue = sold.reduce((s, i) => s + i.salePrice, 0);
+  const totalCOGS = sold.reduce((s, i) => s + i.purchasePrice, 0);
+  const totalFees = sold.reduce((s, i) => s + (i.platformFees||0) + (i.shippingCost||0), 0);
+  const grossProfit = totalRevenue - totalCOGS - totalFees;
+  const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
+  const netProfit = grossProfit - totalExpenses;
+
+  const inventory = items.filter(i => i.status === 'inventory' || i.status === 'listed');
+  const inventoryCost = inventory.reduce((s, i) => s + i.purchasePrice, 0);
+
+  const monthSales = sold.filter(i => i.saleDate && i.saleDate.startsWith(thisMonth));
+  const monthRevenue = monthSales.reduce((s, i) => s + i.salePrice, 0);
+  const monthCOGS = monthSales.reduce((s, i) => s + i.purchasePrice, 0);
+  const monthFees = monthSales.reduce((s, i) => s + (i.platformFees||0) + (i.shippingCost||0), 0);
+  const monthExpenses = expenses.filter(e => e.date.startsWith(thisMonth)).reduce((s, e) => s + e.amount, 0);
+  const monthNet = monthRevenue - monthCOGS - monthFees - monthExpenses;
+
+  const itemCount = items.length;
+  const soldCount = sold.length;
+
+  document.getElementById('dash-stats').innerHTML = `
+    <div class="card stat-card"><div class="stat-value ${monthNet >= 0 ? 'positive' : 'negative'}">$${fmt(monthNet)}</div><div class="stat-label">This Month Net</div></div>
+    <div class="card stat-card"><div class="stat-value">$${fmt(netProfit)}</div><div class="stat-label">All-Time Net</div></div>
+    <div class="card stat-card"><div class="stat-value">$${fmt(totalRevenue)}</div><div class="stat-label">Total Revenue</div></div>
+    <div class="card stat-card"><div class="stat-value">$${fmt(totalExpenses)}</div><div class="stat-label">Total Expenses</div></div>
+    <div class="card stat-card"><div class="stat-value">${soldCount}<span style="font-size:.9rem;color:var(--text-muted)">/${itemCount}</span></div><div class="stat-label">Sold / Total Items</div></div>
+    <div class="card stat-card"><div class="stat-value">${inventory.length}</div><div class="stat-label">Current Inventory</div><div class="stat-sub">$${fmt(inventoryCost)} in stock</div></div>
+  `;
+
+  // Recent sales
+  const recent = [...sold].sort((a,b) => (b.saleDate||'').localeCompare(a.saleDate||'')).slice(0,5);
+  const rsEl = document.getElementById('dash-recent-sales');
+  if (!recent.length) { rsEl.innerHTML = '<div class="empty-state"><p>No sales yet</p></div>'; }
+  else {
+    rsEl.innerHTML = '<div style="display:flex;flex-direction:column;gap:8px;">' + recent.map(i => {
+      const net = i.salePrice - i.purchasePrice - (i.platformFees||0) - (i.shippingCost||0);
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:.85rem;">
+        <div><strong>${esc(i.name)}</strong><br><span style="font-size:.75rem;color:var(--text-muted)">${i.saleDate} on ${esc(i.soldOn||'—')}</span></div>
+        <div style="text-align:right"><span style="font-weight:600">$${fmt(i.salePrice)}</span><br><span class="${net >= 0 ? 'positive' : 'negative'}" style="font-size:.75rem">net $${fmt(net)}</span></div>
+      </div>`;
+    }).join('') + '</div>';
+  }
+
+  // Inventory snapshot
+  const statusCounts = {};
+  items.forEach(i => { statusCounts[i.status] = (statusCounts[i.status] || 0) + 1; });
+  const invEl = document.getElementById('dash-inventory');
+  const order = ['inventory','listed','sold','donated','lost'];
+  invEl.innerHTML = '<div style="display:flex;flex-direction:column;gap:6px;">' + order.map(s => {
+    const c = statusCounts[s] || 0;
+    if (!c && s !== 'inventory') return '';
+    const pct = itemCount ? Math.round(c/itemCount*100) : 0;
+    const label = s.charAt(0).toUpperCase() + s.slice(1);
+    return `<div style="display:flex;align-items:center;gap:10px;font-size:.85rem;">
+      <span style="width:70px;font-weight:500">${label}</span>
+      <div style="flex:1;height:8px;background:var(--border);border-radius:4px;overflow:hidden;">
+        <div style="height:100%;width:${pct}%;background:${s==='sold'?'var(--green)':s==='inventory'?'var(--warning)':s==='listed'?'#3182ce':'var(--red)'};border-radius:4px;"></div>
+      </div>
+      <span style="width:40px;text-align:right;font-weight:600">${c}</span>
+    </div>`;
+  }).filter(Boolean).join('') + (itemCount === 0 ? '<div class="empty-state"><p>Add your first item</p></div>' : '') + '</div>';
+
+  // Profitability by category
+  const soldItems = items.filter(i => i.status === 'sold' && i.salePrice != null);
+  const byCat = {};
+  const bySource = {};
+  const byPlatform = {};
+  const daysInvList = [];
+  soldItems.forEach(i => {
+    const net = i.salePrice - i.purchasePrice - (i.platformFees||0) - (i.shippingCost||0);
+    const cat = i.category || 'Uncategorized';
+    if (!byCat[cat]) byCat[cat] = { count:0, revenue:0, cost:0, fees:0, net:0 };
+    byCat[cat].count++; byCat[cat].revenue += i.salePrice; byCat[cat].cost += i.purchasePrice;
+    byCat[cat].fees += (i.platformFees||0)+(i.shippingCost||0); byCat[cat].net += net;
+    const src = i.sourcedFrom || 'Unknown';
+    if (!bySource[src]) bySource[src] = { count:0, net:0 };
+    bySource[src].count++; bySource[src].net += net;
+    const plat = i.soldOn || 'Unknown';
+    if (!byPlatform[plat]) byPlatform[plat] = { count:0, net:0 };
+    byPlatform[plat].count++; byPlatform[plat].net += net;
+    if (i.purchaseDate && i.saleDate) {
+      const days = Math.round((new Date(i.saleDate) - new Date(i.purchaseDate)) / 86400000);
+      if (days >= 0) daysInvList.push(days);
+    }
+  });
+  const avgDays = daysInvList.length ? Math.round(daysInvList.reduce((s,d)=>s+d,0)/daysInvList.length) : 0;
+  const catEntries = Object.entries(byCat).sort((a,b) => b[1].net - a[1].net);
+  const sourceEntries = Object.entries(bySource).sort((a,b) => b[1].net - a[1].net);
+  const platEntries = Object.entries(byPlatform).sort((a,b) => b[1].net - a[1].net);
+
+  document.getElementById('dash-analytics').innerHTML =
+    `<div class="card-row" style="grid-template-columns:1fr 1fr 1fr;">
+      <div class="card">
+        <h3 style="font-size:.85rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);margin-bottom:8px;">Profit by Category</h3>
+        ${catEntries.length ? '<div style="font-size:.82rem;">'+catEntries.map(([c,d]) =>
+          `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);">
+            <span>${esc(c)} (${d.count})</span><span class="${d.net>=0?'positive':'negative'}">$${fmt(d.net)}</span></div>`
+        ).join('')+'</div>' : '<div class="empty-state"><p>No sold items</p></div>'}
+      </div>
+      <div class="card">
+        <h3 style="font-size:.85rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);margin-bottom:8px;">Profit by Source</h3>
+        ${sourceEntries.length ? '<div style="font-size:.82rem;">'+sourceEntries.map(([s,d]) =>
+          `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);">
+            <span>${esc(s)} (${d.count})</span><span class="${d.net>=0?'positive':'negative'}">$${fmt(d.net)}</span></div>`
+        ).join('')+'</div>' : '<div class="empty-state"><p>No source data</p></div>'}
+      </div>
+      <div class="card">
+        <h3 style="font-size:.85rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);margin-bottom:8px;">Profit by Platform</h3>
+        ${platEntries.length ? '<div style="font-size:.82rem;">'+platEntries.map(([p,d]) =>
+          `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--border);">
+            <span>${esc(p)} (${d.count})</span><span class="${d.net>=0?'positive':'negative'}">$${fmt(d.net)}</span></div>`
+        ).join('')+'</div>' : '<div class="empty-state"><p>No sales yet</p></div>'}
+      </div>
+    </div>
+    <div class="card" style="margin-top:12px;">
+      <h3 style="font-size:.85rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);margin-bottom:8px;">Inventory Turnover</h3>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:16px;">
+        <div class="stat-card"><span class="stat-label">Avg Days in Inventory</span><span class="stat-value">${avgDays}</span></div>
+        <div class="stat-card"><span class="stat-label">Sell-Through Rate</span><span class="stat-value">${itemCount ? Math.round(soldCount/itemCount*100) : 0}%</span></div>
+        <div class="stat-card"><span class="stat-label">Avg Profit / Item</span><span class="stat-value">$${soldCount ? fmt(Object.values(byCat).reduce((s,c)=>s+c.net,0)/soldCount) : '0.00'}</span></div>
+      </div>
+    </div>`;
+}
+
+function openPartnerModal() {
+  renderPartnerList();
+  openModal('partner-modal');
+}
+
+function calcSETax(netProfit) {
+  if (netProfit <= 0) return 0;
+  const netEarnings = netProfit * 0.9235;
+  if (netEarnings < 400) return 0;
+  const ssWageBase = 176100;
+  const ss = Math.min(netEarnings, ssWageBase) * 0.124;
+  const medicare = netEarnings * 0.029;
+  return ss + medicare;
+}
+
+function calcQuarterlyEstimate(netProfit) {
+  if (netProfit <= 0) return [0, 0, 0, 0];
+  const seTax = calcSETax(netProfit);
+  const incomeTax = netProfit > 15000 ? netProfit * 0.15 : 0;
+  const totalTax = seTax + incomeTax;
+  const each = totalTax / 4;
+  const dueDates = ['Apr 15', 'Jun 15', 'Sep 15', 'Jan 15'];
+  return [each, dueDates];
+}
+
+// ========================== SCHEDULE C HELPERS ==========================
+const SCHEDULE_C_MAP = {
+  'Advertising': ['Marketing'],
+  'Car & truck': ['Gas/Mileage', 'Parking/Tolls'],
+  'Supplies': ['Shipping Supplies', 'Tools'],
+  'Rent/lease': ['Storage'],
+  'Repairs': ['Repairs/Cleaning'],
+  'Other expenses': ['Platform Fees', 'Photography', 'Education', 'Subscriptions', 'Other']
+};
+
+function buildScheduleC(sold, yearExpenses, totalRevenue, totalCOGS, totalFees) {
+  const byLine = {};
+  Object.entries(SCHEDULE_C_MAP).forEach(([line, cats]) => {
+    cats.forEach(c => { byLine[line] = 0; });
+  });
+  yearExpenses.forEach(e => {
+    for (const [line, cats] of Object.entries(SCHEDULE_C_MAP)) {
+      if (cats.includes(e.category)) { byLine[line] = (byLine[line] || 0) + e.amount; break; }
+    }
+    if (!Object.values(SCHEDULE_C_MAP).flat().includes(e.category)) {
+      byLine['Other expenses'] = (byLine['Other expenses'] || 0) + e.amount;
+    }
+  });
+  return byLine;
+}
+
+// ========================== REPORTS ==========================
+function renderReport() {
+  const year = parseInt(document.getElementById('report-year').value);
+  const items = getItems();
+  const expenses = getExpenses();
+
+  const sold = items.filter(i => i.status === 'sold' && i.saleDate && i.saleDate.startsWith(year));
+  const yearExpenses = expenses.filter(e => e.date.startsWith(year));
+
+  const totalRevenue = sold.reduce((s, i) => s + i.salePrice, 0);
+  const totalCOGS = sold.reduce((s, i) => s + i.purchasePrice, 0);
+  const totalFees = sold.reduce((s, i) => s + (i.platformFees||0) + (i.shippingCost||0), 0);
+  const grossProfit = totalRevenue - totalCOGS - totalFees;
+  const totalExpenses = yearExpenses.reduce((s, e) => s + e.amount, 0);
+  const netProfit = grossProfit - totalExpenses;
+
+  const byCat = {};
+  yearExpenses.forEach(e => { byCat[e.category] = (byCat[e.category] || 0) + e.amount; });
+
+  const byPlatform = {};
+  sold.forEach(i => {
+    const p = i.soldOn || 'Unknown';
+    byPlatform[p] = (byPlatform[p] || 0) + 1;
+  });
+
+  const scLines = buildScheduleC(sold, yearExpenses, totalRevenue, totalCOGS, totalFees);
+
+  const el = document.getElementById('report-content');
+  if (!sold.length && !yearExpenses.length && !totalRevenue) {
+    el.innerHTML = '<div class="card"><div class="empty-state"><p>No data for ' + year + '</p></div></div>';
+    return;
+  }
+
+  el.innerHTML = `
+    <div class="card-row" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))">
+      <div class="card stat-card"><div class="stat-value">$${fmt(totalRevenue)}</div><div class="stat-label">Gross Revenue</div></div>
+      <div class="card stat-card"><div class="stat-value">$${fmt(totalCOGS)}</div><div class="stat-label">COGS</div></div>
+      <div class="card stat-card"><div class="stat-value ${grossProfit >= 0 ? 'positive' : 'negative'}">$${fmt(grossProfit)}</div><div class="stat-label">Gross Profit</div></div>
+      <div class="card stat-card"><div class="stat-value negative">-$${fmt(totalExpenses)}</div><div class="stat-label">Expenses</div></div>
+      <div class="card stat-card"><div class="stat-value ${netProfit >= 0 ? 'positive' : 'negative'}">$${fmt(netProfit)}</div><div class="stat-label">Net Profit</div></div>
+      <div class="card stat-card"><div class="stat-value">${sold.length}</div><div class="stat-label">Items Sold</div></div>
+    </div>
+
+    <div class="card" style="margin-bottom:20px;">
+      <h3 style="font-size:.9rem;margin-bottom:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;">Schedule C — Part I: Income</h3>
+      <table class="report-table"><tbody>
+        <tr><td>Line 1 — Gross receipts / sales</td><td>$${fmt(totalRevenue)}</td></tr>
+        <tr><td>Line 4 — Cost of goods sold</td><td class="negative">-$${fmt(totalCOGS + totalFees)}</td></tr>
+        <tr class="report-total"><td>Line 5 — Gross profit</td><td>$${fmt(grossProfit)}</td></tr>
+      </tbody></table>
+      <h3 style="font-size:.9rem;margin:16px 0 12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;">Schedule C — Part II: Expenses</h3>
+      <table class="report-table"><tbody>
+        ${Object.entries(scLines).filter(([_, v]) => v).sort((a,b) => b[1] - a[1]).map(([line, amt]) => {
+          const num = { 'Advertising': 8, 'Car & truck': 9, 'Supplies': 22, 'Rent/lease': '20a', 'Repairs': 21, 'Other expenses': 30 }[line] || '';
+          return `<tr><td>Line ${num} — ${line}</td><td class="negative">-$${fmt(amt)}</td></tr>`;
+        }).join('')}
+        <tr class="report-total"><td>Total expenses</td><td class="negative">-$${fmt(totalExpenses)}</td></tr>
+      </tbody></table>
+      <h3 style="font-size:.9rem;margin:16px 0 12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;">Schedule C — Profit or Loss</h3>
+      <table class="report-table"><tbody>
+        <tr><td>Line 5 — Gross profit</td><td>$${fmt(grossProfit)}</td></tr>
+        <tr><td>Line 28 — Total expenses</td><td class="negative">-$${fmt(totalExpenses)}</td></tr>
+        <tr class="report-total"><td>Line 29 — Net profit or (loss)</td><td class="${netProfit >= 0 ? 'positive' : 'negative'}">${netProfit >= 0 ? '' : '('}$${fmt(Math.abs(netProfit))}${netProfit >= 0 ? '' : ')'}</td></tr>
+      </tbody></table>
+    </div>
+
+    <div class="card-row" style="grid-template-columns:1fr 1fr;">
+      <div class="card report-section">
+        <h3>Schedule SE — Self-Employment Tax</h3>
+        ${netProfit > 0 ? (() => {
+          const seTax = calcSETax(netProfit);
+          const deduction = seTax / 2;
+          const netEarnings = netProfit * 0.9235;
+          return `<table class="report-table"><tbody>
+            <tr><td>Net profit (Line 29)</td><td>$${fmt(netProfit)}</td></tr>
+            <tr><td>Net earnings from SE (× 0.9235)</td><td>$${fmt(netEarnings)}</td></tr>
+            <tr><td>Social Security (12.4%)</td><td>$${fmt(Math.min(netEarnings, 176100) * 0.124)}</td></tr>
+            <tr><td>Medicare (2.9%)</td><td>$${fmt(netEarnings * 0.029)}</td></tr>
+            <tr class="report-total"><td>Total SE tax</td><td>$${fmt(seTax)}</td></tr>
+            <tr><td>Deductible half (Schedule 1)</td><td>$${fmt(deduction)}</td></tr>
+          </tbody></table>`;
+        })() : '<div style="color:var(--text-muted);font-size:.85rem;">No SE tax due (net profit ≤ $0)</div>'}
+      </div>
+      <div class="card report-section">
+        <h3>Form 1040-ES — Quarterly Estimates</h3>
+        ${netProfit > 0 ? (() => {
+          const [each, dates] = calcQuarterlyEstimate(netProfit);
+          const seTax = calcSETax(netProfit);
+          const incomeTax = netProfit > 15000 ? netProfit * 0.15 : 0;
+          return `<table class="report-table"><tbody>
+            <tr><td>Est. SE tax</td><td>$${fmt(seTax)}</td></tr>
+            <tr><td>Est. income tax (15%)</td><td>$${fmt(incomeTax)}</td></tr>
+            <tr class="report-total"><td>Est. total annual tax</td><td>$${fmt(seTax + incomeTax)}</td></tr>
+            <tr><td colspan="2" style="padding-top:12px;font-weight:600;">Pay this amount each quarter:</td></tr>
+            ${dates.map((d, i) => `<tr><td>${d}</td><td>$${fmt(each)}</td></tr>`).join('')}
+          </tbody></table>`;
+        })() : '<div style="color:var(--text-muted);font-size:.85rem;">No estimated tax due</div>'}
+      </div>
+    </div>
+
+    ${getPartners().length ? (() => {
+      const partners = getPartners();
+      const totalPct = partners.reduce((s, p) => s + p.ownership, 0);
+      if (totalPct <= 0) return '';
+      return `<div class="card report-section" style="margin-bottom:20px;">
+        <h3>Partnership — Schedule K-1 Allocations (Form 1065)</h3>
+        <table class="report-table"><thead><tr>
+          <th>Partner</th><th>Ownership</th><th>Share of Income</th><th>Share of Expenses</th><th>Share of Net</th>
+        </tr></thead><tbody>
+          ${partners.map(p => {
+            const shareRev = totalRevenue * (p.ownership / 100);
+            const shareExp = totalExpenses * (p.ownership / 100);
+            const shareNet = netProfit * (p.ownership / 100);
+            return `<tr>
+              <td><strong>${esc(p.name)}</strong></td>
+              <td>${p.ownership}%</td>
+              <td>$${fmt(shareRev)}</td>
+              <td class="negative">-$${fmt(shareExp)}</td>
+              <td class="${shareNet >= 0 ? 'positive' : 'negative'}">$${fmt(shareNet)}</td>
+            </tr>`;
+          }).join('')}
+        </tbody></table>
+        <p style="font-size:.75rem;color:var(--text-muted);margin-top:8px;">Each partner receives a Schedule K-1 showing their allocable share. The LLC/Partnership files Form 1065.</p>
+      </div>`;
+    })() : ''}
+
+    <div class="card-row" style="grid-template-columns:1fr 1fr;">
+      <div class="card report-section">
+        <h3>Expense Breakdown</h3>
+        ${Object.keys(byCat).length ? `<table class="report-table"><tbody>
+          ${Object.entries(byCat).sort((a,b) => b[1] - a[1]).map(([cat, amt]) =>
+            `<tr><td>${esc(cat)}</td><td>-$${fmt(amt)}</td></tr>`
+          ).join('')}
+          <tr class="report-total"><td>Total Expenses</td><td>-$${fmt(totalExpenses)}</td></tr>
+        </tbody></table>` : '<div style="color:var(--text-muted);font-size:.85rem;">No expenses for this year</div>'}
+      </div>
+      <div class="card report-section">
+        <h3>Sales by Platform</h3>
+        ${Object.keys(byPlatform).length ? `<table class="report-table"><tbody>
+          ${Object.entries(byPlatform).sort((a,b) => b[1] - a[1]).map(([p, c]) =>
+            `<tr><td>${esc(p)}</td><td>${c} item${c !== 1 ? 's' : ''}</td></tr>`
+          ).join('')}
+        </tbody></table>` : '<div style="color:var(--text-muted);font-size:.85rem;">No sales for this year</div>'}
+      </div>
+    </div>
+
+    <div class="card report-section">
+      <h3>Sold Items (${year})</h3>
+      ${sold.length ? `<div class="table-wrap"><table><thead><tr>
+        <th>Item</th><th>Date Sold</th><th>Sold On</th><th>Sale Price</th><th>Cost</th><th>Fees</th><th>Shipping</th><th>Net</th>
+      </tr></thead><tbody>
+        ${sold.sort((a,b) => (b.saleDate||'').localeCompare(a.saleDate||'')).map(i => {
+          const net = i.salePrice - i.purchasePrice - (i.platformFees||0) - (i.shippingCost||0);
+          return `<tr>
+            <td>${esc(i.name)}</td>
+            <td style="font-size:.8rem">${i.saleDate}</td>
+            <td>${esc(i.soldOn||'—')}</td>
+            <td>$${fmt(i.salePrice)}</td>
+            <td>$${fmt(i.purchasePrice)}</td>
+            <td>$${fmt(i.platformFees||0)}</td>
+            <td>$${fmt(i.shippingCost||0)}</td>
+            <td class="${net >= 0 ? 'positive' : 'negative'}">$${fmt(net)}</td>
+          </tr>`;
+        }).join('')}
+      </tbody></table></div>` : '<div style="color:var(--text-muted);font-size:.85rem;">No items sold this year</div>'}
+    </div>
+  `;
+}
+
+function exportCSV() {
+  const year = document.getElementById('report-year').value;
+  const items = getItems();
+  const expenses = getExpenses();
+
+  const sold = items.filter(i => i.status === 'sold' && i.saleDate && i.saleDate.startsWith(year));
+  const yearExpenses = expenses.filter(e => e.date.startsWith(year));
+
+  let csv = '=== FlipTracker Tax Report: ' + year + ' ===\n\n';
+  csv += 'ITEMS SOLD\n';
+  csv += 'Name,Category,Condition,Sale Date,Sold On,Purchase Price,Sale Price,Fees,Shipping,Net Profit\n';
+  sold.forEach(i => {
+    const net = i.salePrice - i.purchasePrice - (i.platformFees||0) - (i.shippingCost||0);
+    csv += `"${i.name}","${i.category||''}","${i.condition||''}","${i.saleDate}","${i.soldOn||''}",${i.purchasePrice},${i.salePrice},${i.platformFees||0},${i.shippingCost||0},${net}\n`;
+  });
+
+  const totalRevenue = sold.reduce((s, i) => s + i.salePrice, 0);
+  const totalCOGS = sold.reduce((s, i) => s + i.purchasePrice, 0);
+  const totalFees = sold.reduce((s, i) => s + (i.platformFees||0) + (i.shippingCost||0), 0);
+  const grossProfit = totalRevenue - totalCOGS - totalFees;
+  csv += `\nGross Revenue,,,${totalRevenue}\n`;
+  csv += `COGS,,,${totalCOGS}\n`;
+  csv += `Fees,,,${totalFees}\n`;
+  csv += `Gross Profit,,,${grossProfit}\n\n`;
+
+  csv += 'EXPENSES\n';
+  csv += 'Date,Category,Description,Amount\n';
+  yearExpenses.forEach(e => {
+    csv += `"${e.date}","${e.category}","${e.description}","${e.amount}"\n`;
+  });
+  const totalExpenses = yearExpenses.reduce((s, e) => s + e.amount, 0);
+  const netProfit = grossProfit - totalExpenses;
+  csv += `\nTotal Expenses,,,${totalExpenses}\n`;
+  csv += `Net Profit,,,${netProfit}\n`;
+
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `fliptracker-tax-${year}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+// ========================== DATA EXPORT/IMPORT ==========================
+function exportData() {
+  const fb = getFirebaseConfig();
+  const data = {
+    items: getItems(),
+    expenses: getExpenses(),
+    partners: getPartners(),
+    mileage: getMileage(),
+    scans: getScans(),
+    firebaseUrl: fb.url,
+    firebaseKey: fb.key,
+    exportedAt: new Date().toISOString()
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'fliptracker-data.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function importData(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (data.items) setItems(data.items);
+      if (data.expenses) setExpenses(data.expenses);
+      if (data.partners) setPartners(data.partners || []);
+      if (data.mileage) setMileage(data.mileage);
+      if (data.scans) setScans(data.scans || []);
+      if (data.firebaseUrl && data.firebaseKey) {
+        localStorage.setItem(STORE_FB_URL, data.firebaseUrl);
+        localStorage.setItem(STORE_FB_KEY, data.firebaseKey);
+      }
+      renderDashboard();
+      renderItems();
+      renderExpenses();
+      renderMileage();
+      document.getElementById('firebase-url').value = data.firebaseUrl || '';
+      document.getElementById('firebase-key').value = data.firebaseKey || '';
+      showPage('dashboard');
+      alert('Data imported successfully! ' + (data.items ? data.items.length : 0) + ' items, ' +
+        (data.expenses ? data.expenses.length : 0) + ' expenses, ' +
+        (data.mileage ? data.mileage.length : 0) + ' trips.');
+    } catch(err) {
+      alert('Import failed: invalid JSON file. ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+// ========================== MODALS ==========================
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+});
+
+// ========================== DARK MODE ==========================
+function toggleDark() {
+  const html = document.documentElement;
+  const isDark = html.getAttribute('data-theme') === 'dark';
+  html.setAttribute('data-theme', isDark ? '' : 'dark');
+  localStorage.setItem('fliptracker_theme', isDark ? 'light' : 'dark');
+  updateDarkIcon();
+}
+function updateDarkIcon() {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  document.getElementById('dark-icon').textContent = isDark ? '☀️' : '🌙';
+  document.getElementById('dark-label').textContent = isDark ? 'Light' : 'Dark';
+}
+
+
+
+// ========================== HELPERS ==========================
+function fmt(n) { return n.toFixed(2); }
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+function showPage(page) {
+  document.querySelectorAll('.sidebar a').forEach(x => x.classList.remove('active'));
+  const link = document.querySelector(`[data-page="${page}"]`);
+  if (link) link.classList.add('active');
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  if (page === 'dashboard') renderDashboard();
+  if (page === 'items') renderItems();
+  if (page === 'expenses') renderExpenses();
+  if (page === 'scanner') initScanner();
+  if (page === 'mileage') renderMileage();
+  if (page === 'reports') renderReport();
+  if (page === 'settings') loadFirebaseConfig();
+}
+
+// IRS standard mileage rate (2025): $0.70/mi for business
+const IRS_MILEAGE_RATE = 0.70;
+
+// ========================== SCANNER ==========================
+let scannerStream = null;
+
+function initScanner() {
+  document.getElementById('scanner-result').innerHTML = '';
+  const liveBtn = document.getElementById('scanner-start-btn');
+  liveBtn.style.display = (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) ? '' : 'none';
+  renderScannedItems();
+}
+
+function renderScannedItems() {
+  const scans = getScans();
+  const tbody = document.getElementById('scanned-items-tbody');
+  const empty = document.getElementById('scanned-items-empty');
+  if (!scans.length) {
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+  tbody.innerHTML = scans.slice().reverse().map(s => `<tr>
+    <td style="font-family:monospace;font-size:.8rem;">${esc(s.upc)}</td>
+    <td>${esc(s.product||'—')}</td>
+    <td style="font-size:.8rem">${s.date}</td>
+    <td class="actions">
+      <button class="btn btn-sm" onclick="createItemFromScan('${s.id}')">+ Add Item</button>
+      <button class="btn btn-sm" style="color:var(--danger)" onclick="deleteScan('${s.id}')">✕</button>
+    </td>
+  </tr>`).join('');
+}
+
+async function startScanner() {
+  const video = document.getElementById('scanner-video');
+  const placeholder = document.getElementById('scanner-placeholder');
+  const startBtn = document.getElementById('scanner-start-btn');
+  const stopBtn = document.getElementById('scanner-stop-btn');
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    document.getElementById('scanner-result').innerHTML = '<p style="color:var(--danger);">Camera not available over HTTP. Use the UPC manual entry above, or connect via HTTPS.</p>';
+    return;
+  }
+  try {
+    scannerStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    video.srcObject = scannerStream;
+    video.style.display = 'block';
+    placeholder.style.display = 'none';
+    startBtn.style.display = 'none';
+    stopBtn.style.display = 'inline-block';
+    scanLoop();
+  } catch (e) {
+    document.getElementById('scanner-result').innerHTML = `<p style="color:var(--danger);">Camera error: ${e.message}. Try entering the UPC manually above.</p>`;
+  }
+}
+
+function stopScanner() {
+  if (scannerStream) {
+    scannerStream.getTracks().forEach(t => t.stop());
+    scannerStream = null;
+  }
+  const video = document.getElementById('scanner-video');
+  video.style.display = 'none';
+  document.getElementById('scanner-placeholder').style.display = 'block';
+  document.getElementById('scanner-start-btn').style.display = 'inline-block';
+  document.getElementById('scanner-stop-btn').style.display = 'none';
+}
+
+async function scanLoop() {
+  if (!scannerStream) return;
+  try {
+    if ('BarcodeDetector' in window) {
+      const detector = new BarcodeDetector({ formats: ['ean_13','ean_8','upc_a','upc_e','code_128','code_39','qr_code'] });
+      const video = document.getElementById('scanner-video');
+      if (video.readyState >= 2) {
+        const barcodes = await detector.detect(video);
+        if (barcodes.length > 0) {
+          handleBarcode(barcodes[0].rawValue);
+          return;
+        }
+      }
+    } else if (typeof ZXing !== 'undefined') {
+      const video = document.getElementById('scanner-video');
+      if (video.readyState >= 2) {
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+        const codeReader = new ZXing.BrowserMultiFormatReader();
+        const result = await codeReader.decodeFromImage(undefined, canvas.toDataURL());
+        if (result) {
+          handleBarcode(result.getText());
+          return;
+        }
+      }
+    }
+  } catch {}
+  setTimeout(scanLoop, 500);
+}
+
+async function scanPhoto(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  document.getElementById('scanner-result').innerHTML = '<p style="color:var(--text-muted);">Decoding barcode...</p>';
+  const img = new Image();
+  img.onload = async function() {
+    const canvas = document.createElement('canvas');
+    const maxDim = 1200;
+    let w = img.width, h = img.height;
+    if (w > maxDim || h > maxDim) {
+      const ratio = Math.min(maxDim / w, maxDim / h);
+      w = Math.round(w * ratio); h = Math.round(h * ratio);
+    }
+    canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, w, h);
+
+    if ('BarcodeDetector' in window) {
+      try {
+        const detector = new BarcodeDetector({ formats: ['ean_13','ean_8','upc_a','upc_e','code_128','code_39'] });
+        const barcodes = await detector.detect(img);
+        if (barcodes.length > 0) { handleBarcode(barcodes[0].rawValue); return; }
+      } catch {}
+    }
+
+    if (typeof ZXing !== 'undefined') {
+      try {
+        const codeReader = new ZXing.BrowserMultiFormatReader();
+        const result = await codeReader.decodeFromImage(undefined, canvas.toDataURL());
+        if (result) { handleBarcode(result.getText()); return; }
+      } catch {}
+    }
+
+    document.getElementById('scanner-result').innerHTML = '<p style="color:var(--danger);">No barcode found. Try a closer/clearer photo. For reliable scanning, use an HTTPS tunnel (see instructions).</p>';
+  };
+  img.src = URL.createObjectURL(file);
+  event.target.value = '';
+}
+
+async function handleBarcode(code) {
+  stopScanner();
+  document.getElementById('scanner-result').innerHTML = '<p style="color:var(--text-muted);">Looking up product...</p>';
+  const scans = getScans();
+  const existing = scans.find(s => s.upc === code);
+  if (existing) {
+    document.getElementById('scanner-result').innerHTML = `<p>Already scanned: <strong>${esc(existing.product||code)}</strong></p>`;
+    return;
+  }
+  let productName = '';
+  let source = '';
+  try {
+    const res = await fetch(`https://world.openfoodfacts.org/api/v2/product/${code}.json`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.product) {
+        productName = data.product.product_name || data.product.generic_name || '';
+        if (productName) source = 'Open Food Facts';
+      }
+    }
+  } catch {}
+  if (!productName) {
+    try {
+      const res = await fetch(`https://api.upcitemdb.com/prod/trial/lookup?upc=${code}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.items && data.items.length > 0) {
+          productName = data.items[0].title || data.items[0].description || '';
+          if (productName) source = 'UPCItemDB';
+        }
+      }
+    } catch {}
+  }
+  const now = new Date();
+  const scanId = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+  const scan = {
+    id: scanId,
+    upc: code,
+    product: productName || 'Unknown Product',
+    date: today()
+  };
+  scans.push(scan);
+  setScans(scans);
+  renderScannedItems();
+  if (productName) {
+    document.getElementById('scanner-result').innerHTML =
+      `<p style="color:var(--green);">Scanned: <strong>${esc(scan.product)}</strong> (${code})</p>
+       <p style="font-size:.75rem;color:var(--text-muted);margin-top:2px;">via ${esc(source)}</p>
+       <button class="btn btn-primary btn-sm" onclick="createItemFromScan('${scanId}')" style="margin-top:8px;">+ Add as Item</button>`;
+  } else {
+    document.getElementById('scanner-result').innerHTML =
+      `<p style="color:var(--warning);">No product found for <strong>${esc(code)}</strong></p>
+       <div class="scanner-name-edit">
+         <input type="text" id="scan-name-input" placeholder="Enter product name..." autofocus>
+         <button class="btn btn-primary btn-sm" onclick="setScanName('${scanId}')">Save</button>
+         <button class="btn btn-sm" onclick="createItemFromScan('${scanId}')">Skip</button>
+       </div>`;
+    setTimeout(() => {
+      const el = document.getElementById('scan-name-input');
+      if (el) el.focus();
+    }, 100);
+  }
+}
+
+function setScanName(scanId) {
+  const input = document.getElementById('scan-name-input');
+  if (!input) return;
+  const name = input.value.trim();
+  if (!name) return;
+  const scans = getScans();
+  const scan = scans.find(s => s.id === scanId);
+  if (!scan) return;
+  scan.product = name;
+  setScans(scans);
+  renderScannedItems();
+  document.getElementById('scanner-result').innerHTML =
+    `<p style="color:var(--green);">Saved: <strong>${esc(name)}</strong> (${esc(scan.upc)})</p>
+     <button class="btn btn-primary btn-sm" onclick="createItemFromScan('${scanId}')" style="margin-top:8px;">+ Add as Item</button>`;
+}
+
+function lookupManual() {
+  const code = document.getElementById('scanner-manual').value.trim();
+  if (!code) return;
+  handleBarcode(code);
+}
+
+function createItemFromScan(scanId) {
+  const scans = getScans();
+  const scan = scans.find(s => s.id === scanId);
+  if (!scan) return;
+  stopScanner();
+  document.querySelectorAll('.sidebar a').forEach(x => x.classList.remove('active'));
+  document.querySelector('[data-page="items"]').classList.add('active');
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-items').classList.add('active');
+  renderItems();
+  openItemModal();
+  document.getElementById('item-name').value = scan.product || '';
+  document.getElementById('item-notes').value = 'Scanned: ' + scan.upc;
+}
+
+function deleteScan(id) {
+  setScans(getScans().filter(s => s.id !== id));
+  renderScannedItems();
+}
+
+function clearScannedItems() {
+  setScans([]);
+  renderScannedItems();
+}
+
+// ========================== MILEAGE ==========================
+function openMileageModal(trip) {
+  const isEdit = !!trip;
+  document.getElementById('mileage-modal-title').textContent = isEdit ? 'Edit Trip' : 'New Trip';
+  document.getElementById('mileage-id').value = trip ? trip.id : '';
+  document.getElementById('mileage-date').value = trip ? trip.date : today();
+  document.getElementById('mileage-purpose').value = trip ? (trip.purpose || 'Thrift Shopping') : 'Thrift Shopping';
+  document.getElementById('mileage-start').value = trip ? (trip.startLocation || '') : '';
+  document.getElementById('mileage-end').value = trip ? (trip.endLocation || '') : '';
+  document.getElementById('mileage-miles').value = trip ? trip.miles : '';
+  document.getElementById('mileage-notes').value = trip ? (trip.notes || '') : '';
+  openModal('mileage-modal');
+}
+
+function saveMileage() {
+  const id = document.getElementById('mileage-id').value;
+  const trip = {
+    id: id || (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2,6)),
+    date: document.getElementById('mileage-date').value,
+    purpose: document.getElementById('mileage-purpose').value,
+    startLocation: document.getElementById('mileage-start').value,
+    endLocation: document.getElementById('mileage-end').value,
+    miles: parseFloat(document.getElementById('mileage-miles').value) || 0,
+    notes: document.getElementById('mileage-notes').value
+  };
+  if (!trip.date || trip.miles <= 0) return;
+  const mileage = getMileage();
+  if (id) {
+    const idx = mileage.findIndex(t => t.id === id);
+    if (idx !== -1) mileage[idx] = trip;
+  } else {
+    mileage.push(trip);
+  }
+  setMileage(mileage);
+  closeModal('mileage-modal');
+  renderMileage();
+}
+
+function deleteMileage(id) {
+  setMileage(getMileage().filter(t => t.id !== id));
+  renderMileage();
+}
+
+function renderMileage() {
+  const trips = getMileage();
+  const year = document.getElementById('filter-mileage-year').value;
+  const filtered = year ? trips.filter(t => t.date.startsWith(year)) : trips;
+
+  const totalMiles = filtered.reduce((s, t) => s + t.miles, 0);
+  const totalDeductible = totalMiles * IRS_MILEAGE_RATE;
+
+  document.getElementById('mileage-summary').innerHTML =
+    `<div class="stat-card"><span class="stat-label">Trips</span><span class="stat-value">${filtered.length}</span></div>
+     <div class="stat-card"><span class="stat-label">Total Miles</span><span class="stat-value">${totalMiles.toFixed(1)}</span></div>
+     <div class="stat-card"><span class="stat-label">Deductible</span><span class="stat-value">$${fmt(totalDeductible)}</span></div>
+     <div class="stat-card"><span class="stat-label">Rate</span><span class="stat-value" style="font-size:.85rem;">$${IRS_MILEAGE_RATE}/mi</span></div>`;
+
+  document.getElementById('mileage-count').textContent = filtered.length + ' trip' + (filtered.length !== 1 ? 's' : '');
+
+  if (!filtered.length) {
+    document.getElementById('mileage-tbody').innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:24px;">No trips logged yet</td></tr>';
+    return;
+  }
+
+  document.getElementById('mileage-tbody').innerHTML = filtered.sort((a,b) => b.date.localeCompare(a.date)).map(t =>
+    `<tr>
+      <td style="font-size:.8rem">${t.date}</td>
+      <td>${esc(t.purpose)}</td>
+      <td style="font-size:.85rem">${esc(t.startLocation||'—')}</td>
+      <td style="font-size:.85rem">${esc(t.endLocation||'—')}</td>
+      <td>${t.miles.toFixed(1)}</td>
+      <td>$${fmt(t.miles * IRS_MILEAGE_RATE)}</td>
+      <td>
+        <button class="btn btn-sm" onclick="openMileageModal(getMileage().find(x=>x.id==='${t.id}'))">✎</button>
+        <button class="btn btn-sm" style="color:var(--danger)" onclick="deleteMileage('${t.id}')">✕</button>
+      </td>
+    </tr>`
+  ).join('');
+}
+
+// ========================== INIT ==========================
+async function tryFetchDataFile() {
+  try {
+    const res = await fetch('data.json?' + Date.now());
+    if (!res.ok) return;
+    const text = await res.text();
+    if (!text.trim()) return;
+    const data = JSON.parse(text);
+    if (data.items) lsSave(STORE_ITEMS, data.items);
+    if (data.expenses) lsSave(STORE_EXPENSES, data.expenses);
+  } catch {}
+}
+
+function init() {
+  // Force refresh if app version changed — kills stale PWA cache
+  const lastVer = localStorage.getItem('fliptracker_version');
+  if (lastVer && lastVer !== APP_VERSION) {
+    localStorage.setItem('fliptracker_version', APP_VERSION);
+    if ('serviceWorker' in navigator) {
+      caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k)))).then(() => {
+        navigator.serviceWorker.getRegistrations().then(regs =>
+          Promise.all(regs.map(r => r.unregister()))
+        ).then(() => window.location.reload());
+      });
+    }
+    return;
+  }
+  if (!lastVer) localStorage.setItem('fliptracker_version', APP_VERSION);
+
+  const savedTheme = localStorage.getItem('fliptracker_theme');
+  if (savedTheme === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+  updateDarkIcon();
+
+  // Register service worker for PWA — with auto-update
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js?v=' + APP_VERSION, { scope: '/' }).then(reg => {
+      reg.addEventListener('updatefound', () => {
+        const newSW = reg.installing;
+        newSW.addEventListener('statechange', () => {
+          if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
+            newSW.postMessage('SKIP_WAITING');
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+              window.location.reload();
+            });
+          }
+        });
+      });
+    }).catch(() => {});
+  }
+
+  // Restore folder handle first; if using localhost, also try direct fetch fallback
+  restoreHandle().then(ok => {
+    if (!ok) tryFetchDataFile();
+  });
+
+  // Load cloud-synced data if Firebase is configured
+  const fbCfg = getFirebaseConfig();
+  if (fbCfg.url && fbCfg.key) {
+    loadFromFirebase().then(found => {
+      if (found) { renderDashboard(); renderItems(); renderExpenses(); renderMileage(); renderScannedItems(); }
+    });
+    startFirebasePoll();
+    updateSyncStatus('synced');
+  }
+
+  populateSelect('item-category', CATEGORIES, '');
+  populateSelect('item-source', SOURCES, '');
+  populateSelect('item-sold-on', SELL_PLATFORMS, '');
+  populateSelect('expense-category', EXPENSE_CATS, '');
+
+  // Get years from data for filter
+  const items = getItems();
+  const expenses = getExpenses();
+  const mileage = getMileage();
+  const years = new Set();
+  items.forEach(i => { if (i.purchaseDate) years.add(i.purchaseDate.slice(0,4)); if (i.saleDate) years.add(i.saleDate.slice(0,4)); });
+  expenses.forEach(e => { if (e.date) years.add(e.date.slice(0,4)); });
+  mileage.forEach(t => { if (t.date) years.add(t.date.slice(0,4)); });
+  const cy = new Date().getFullYear();
+  years.add(String(cy));
+  years.add(String(cy - 1));
+  const yearSel = document.getElementById('report-year');
+  const mileYearSel = document.getElementById('filter-mileage-year');
+  [...years].sort().reverse().forEach(y => {
+    const o = document.createElement('option'); o.value = y; o.textContent = y;
+    if (y === String(cy)) o.selected = true;
+    yearSel.appendChild(o);
+    const mo = document.createElement('option'); mo.value = y; mo.textContent = y;
+    mileYearSel.appendChild(mo);
+  });
+  if (mileYearSel.options.length > 0) mileYearSel.value = String(cy);
+
+  // Populate filter dropdowns (use unique values from data)
+  const cats = new Set(); items.forEach(i => i.category && cats.add(i.category));
+  populateFilterSelect('filter-item-category', [...cats]);
+  const statuses = ['inventory','listed','sold','donated','lost'];
+  populateFilterSelect('filter-item-status', statuses);
+  const expCats = new Set(); expenses.forEach(e => e.category && expCats.add(e.category));
+  populateFilterSelect('filter-expense-category', [...expCats]);
+
+  renderDashboard();
+  renderItems();
+  renderExpenses();
+}
+
+init();
+</script>
+</body>
+</html>

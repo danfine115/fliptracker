@@ -1,0 +1,22 @@
+{
+  "name": "FlipTracker",
+  "short_name": "FlipTracker",
+  "description": "Thrift flip business tracker — items, expenses, tax reports, barcode scanning",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f0f13",
+  "theme_color": "#7c5cfc",
+  "icons": [
+    {
+      "src": "icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ],
+  "orientation": "portrait-primary"
+}
