@@ -938,7 +938,12 @@ function openItemModal(item) {
   document.getElementById('item-condition').value = item ? (item.condition || 'Good') : 'Good';
   document.getElementById('item-cost').value = item ? item.purchasePrice : '';
   document.getElementById('item-purchase-date').value = item ? item.purchaseDate : today();
-  document.getElementById('item-source').value = item ? (item.sourcedFrom || '') : '';
+  const srcVal = item ? (item.sourcedFrom || '') : '';
+  const srcSel = document.getElementById('item-source');
+  if (srcVal && !srcSel.querySelector('option[value="' + srcVal.replace(/"/g,'&quot;') + '"]')) {
+    const o = document.createElement('option'); o.value = srcVal; o.textContent = srcVal; srcSel.appendChild(o);
+  }
+  srcSel.value = srcVal;
   document.getElementById('item-status').value = item ? item.status : 'inventory';
   document.getElementById('item-sale-price').value = item ? (item.salePrice || '') : '';
   document.getElementById('item-sale-date').value = item ? (item.saleDate || '') : '';
